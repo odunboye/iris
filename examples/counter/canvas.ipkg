@@ -1,0 +1,6 @@
+package iris-counter-canvas
+depends = iris
+sourcedir = "."
+modules = Counter, MainCanvas
+main = MainCanvas
+executable = counter-canvas

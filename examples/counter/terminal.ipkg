@@ -1,0 +1,7 @@
+package iris-counter-terminal
+depends = iris
+sourcedir = "."
+modules = Counter, Main
+main = Main
+executable = counter-terminal
+prebuild = "mkdir -p build/exec/counter-terminal_app && cc -dynamiclib ../../c/iristui.c -o build/exec/counter-terminal_app/libiristui.dylib 2>/dev/null || cc -shared -fPIC ../../c/iristui.c -o build/exec/counter-terminal_app/libiristui.so"

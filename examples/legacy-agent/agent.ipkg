@@ -1,0 +1,7 @@
+package iris-legacy-agent
+depends = iris
+sourcedir = "."
+modules = Main
+main = Main
+executable = iris-legacy-agent
+prebuild = "mkdir -p build/exec/iris-legacy-agent_app && cc -dynamiclib ../../c/iristui.c -o build/exec/iris-legacy-agent_app/libiristui.dylib 2>/dev/null || cc -shared -fPIC ../../c/iristui.c -o build/exec/iris-legacy-agent_app/libiristui.so"

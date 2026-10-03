@@ -1,0 +1,6 @@
+package iris-counter-web
+depends = iris
+sourcedir = "."
+modules = Counter, MainWeb
+main = MainWeb
+executable = counter-web

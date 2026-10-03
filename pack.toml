@@ -1,0 +1,4 @@
+[custom.all.iris]
+type = "local"
+path = "."
+ipkg = "iris.ipkg"

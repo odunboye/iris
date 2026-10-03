@@ -1,0 +1,6 @@
+package iris-canvas-lifecycle
+depends = iris
+sourcedir = "."
+modules = CanvasLifecycle
+main = CanvasLifecycle
+executable = canvas-lifecycle
