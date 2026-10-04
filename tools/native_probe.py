@@ -56,7 +56,7 @@ def project(directory, capacitor):
         '<link rel="stylesheet" href="probe.css"></head><body>Probe starting<script src="app.js"></script></body></html>')
     (public / 'probe.css').write_text('body{font:36px system-ui;background:white;color:black;padding:80px 10px}')
     (directory / 'probe.js').write_bytes((Path(__file__).parent / 'native-probe.js').read_bytes())
-    (directory / 'flux.mobile.json').write_text(json.dumps({'format': 1, 'appId': APP, 'appName': 'Vault Probe',
+    (directory / 'iris.mobile.json').write_text(json.dumps({'format': 1, 'appId': APP, 'appName': 'Vault Probe',
         'capacitor': str(capacitor), 'webDir': 'public', 'entry': 'probe.js', 'assets': ['index.html', '*.css']}))
     run([ROOT / 'iris', '--project', directory, 'build'])
 

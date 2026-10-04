@@ -34,7 +34,7 @@ imports `Iris.Mobile`.
 
 ## Configuration
 
-Add `flux.mobile.json` beside an application's `flux.json` (or pass an explicit
+Add `iris.mobile.json` beside an application's `flux.json` (or pass an explicit
 `--config FILE` for a disposable packaging experiment):
 
 ```json

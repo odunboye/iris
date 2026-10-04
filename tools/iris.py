@@ -2,7 +2,7 @@
 """Iris Capacitor packaging CLI; packages a compiled Iris application for a
 Capacitor WebView. Moved here from Flux (as `flux mobile ...`) since it has
 no dependency on Flux's server - it packages whatever UI application you
-point it at, built on `flux.mobile.json`-shaped configuration."""
+point it at, built on `iris.mobile.json`-shaped configuration."""
 import argparse
 import contextlib
 import hashlib
@@ -73,11 +73,11 @@ def library(path):
 
 def configuration(project, override=None, require_entry=True):
     project = project.resolve(strict=True)
-    file = Path(override).resolve(strict=True) if override else project / 'flux.mobile.json'
+    file = Path(override).resolve(strict=True) if override else project / 'iris.mobile.json'
     cfg = read_json(file)
     required = {'format', 'appId', 'appName', 'capacitor', 'webDir', 'entry', 'assets'}
     if not isinstance(cfg, dict) or type(cfg.get('format')) is not int or cfg['format'] not in [1, 2]:
-        raise ValueError('Expected format-1 or format-2 flux.mobile.json')
+        raise ValueError('Expected format-1 or format-2 iris.mobile.json')
     if cfg['format'] == 2:
         required = required | {'apiOrigin'}
     if not required <= set(cfg) or set(cfg) - required - {'ui'}:

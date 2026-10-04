@@ -33,7 +33,7 @@ class MobileTests(unittest.TestCase):
         self.save()
 
     def save(self):
-        (self.project / 'flux.mobile.json').write_text(json.dumps(self.cfg))
+        (self.project / 'iris.mobile.json').write_text(json.dumps(self.cfg))
 
     def test_build_and_verify_module_bundle(self):
         release = mobile.build(self.project)
@@ -112,7 +112,7 @@ class MobileTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 mobile.build(self.project)
             self.cfg = original
-        (self.project / 'flux.mobile.json').write_text('{"format":1,"format":1}')
+        (self.project / 'iris.mobile.json').write_text('{"format":1,"format":1}')
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             mobile.build(self.project)
 
