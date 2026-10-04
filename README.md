@@ -81,9 +81,10 @@ Native validation additionally requires Xcode and/or the Android SDK.
 pack --no-prompt install iris
 ```
 
-`iris new` generates a git-pinned dependency registration for an application.
-The current mobile compiler requires a local map instead; follow
-[the tutorial's dependency setup](docs/tutorials/web-to-android.md#4-use-a-local-iris-dependency-for-mobile-compilation).
+`iris new` generates a git-pinned dependency registration for an application;
+`iris compile` resolves it automatically (cloning the pinned commit into a
+local cache the first time), the same as `--capacitor`. See
+[the tutorial](docs/tutorials/web-to-android.md) for the full walkthrough.
 
 ## Build and test
 

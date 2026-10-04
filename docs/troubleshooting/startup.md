@@ -10,13 +10,16 @@ it with the checkout's `./iris install-cli`, put the launcher directory on PATH,
 and use `iris` in your project. You can also invoke the checkout launcher by its
 absolute path. Moving/removing that checkout breaks the installed launcher.
 
-## Mobile compile rejects the Pack map
+## Mobile compile fails to resolve a dependency
 
-`Mobile compile currently requires a local managed Pack map` means a custom
-package still has `type = "git"` or another non-local type. The scaffold itself
-starts with a git pin. Follow the
-[local dependency step](../tutorials/web-to-android.md#4-use-a-local-iris-dependency-for-mobile-compilation),
-including Iris's entry; keep the target registrations.
+`iris compile` resolves both `type = "local"` and `type = "git"` `pack.toml`
+entries automatically - a git entry is cloned into a local cache on first use
+(see [configuration](../reference/configuration.md)). A `git fetch` failure
+here almost always means the pinned commit isn't on that remote: scaffolding
+from an uncommitted or unpushed local change produces a `pack.toml` whose
+commit nothing can fetch. Switch that entry to `type = "local"` with
+`path = "/absolute/path/to/iris"` instead. `Unsupported Pack dependency type`
+means some other, non-git, non-local type was set by hand; use one of those two.
 
 ## Build cannot find the application entry
 
@@ -36,7 +39,7 @@ those are generated outputs with recorded fingerprints and hashes.
 
 Run `iris run android` in an interactive terminal with an emulator already
 started. Automated execution can stop at Capacitor's device-selection prompt.
-Use the [host CLI with an explicit target](../tutorials/web-to-android.md#6-know-where-the-outputs-live)
+Use the [host CLI with an explicit target](../tutorials/web-to-android.md#5-know-where-the-outputs-live)
 for noninteractive deployment. Run that CLI from `.workspace/mobile/native`,
 otherwise Capacitor can report that the Android platform has not been added.
 

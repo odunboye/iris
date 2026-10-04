@@ -512,5 +512,100 @@ class DefaultCapacitorTests(unittest.TestCase):
         mobile.subprocess.run.assert_not_called()
 
 
+class GitDependencyResolutionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name).resolve()
+        self.env_patch = patch.dict(os.environ, {'XDG_CACHE_HOME': str(self.home / 'cache')})
+        self.env_patch.start()
+        self.addCleanup(self.env_patch.stop)
+        self.calls = []
+
+        def fake_git(args, **kwargs):
+            self.calls.append(args)
+            if args[1] == 'init':
+                Path(args[3]).mkdir(parents=True, exist_ok=True)
+            return unittest.mock.Mock(returncode=0)
+
+        self.git_patch = patch.object(mobile.subprocess, 'run', side_effect=fake_git)
+        self.git_patch.start()
+        self.addCleanup(self.git_patch.stop)
+        self.spec = {'url': 'https://example.test/dep.git', 'commit': 'deadbeef' * 5}
+
+    def test_clones_once_and_caches_by_name_and_commit(self):
+        expected = self.home / 'cache/iris/deps/widget' / self.spec['commit']
+        resolved = mobile.resolved_git_dependency('widget', self.spec)
+        self.assertEqual(resolved, expected)
+        self.assertTrue(expected.is_dir())
+        fetch = next(c for c in self.calls if 'fetch' in c)
+        self.assertIn(self.spec['url'], fetch)
+        self.assertIn(self.spec['commit'], fetch)
+
+    def test_second_call_reuses_the_cache_without_cloning_again(self):
+        mobile.resolved_git_dependency('widget', self.spec)
+        self.calls.clear()
+        mobile.resolved_git_dependency('widget', self.spec)
+        self.assertEqual(self.calls, [])
+
+    def test_failed_clone_leaves_no_partial_cache(self):
+        def failing(args, **kwargs):
+            if args[1] == 'init':
+                Path(args[3]).mkdir(parents=True, exist_ok=True)
+                return unittest.mock.Mock(returncode=0)
+            raise mobile.subprocess.CalledProcessError(1, args)
+
+        with patch.object(mobile.subprocess, 'run', side_effect=failing):
+            with self.assertRaises(mobile.subprocess.CalledProcessError):
+                mobile.resolved_git_dependency('widget', self.spec)
+        cache = self.home / 'cache/iris/deps/widget' / self.spec['commit']
+        self.assertFalse(cache.exists())
+        self.assertEqual(list((self.home / 'cache/iris/deps/widget').glob('*')), [])
+
+
+class CompileUiDependencyTypeTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.project = Path(self.temp.name).resolve()
+        (self.project / 'mobile.ipkg').write_text('package fixture\n')
+        cap = self.project / 'capacitor'; cap.mkdir()
+        (cap / 'js').mkdir(); (cap / 'package.json').write_text('{"version":"0.3.0"}')
+        (cap / 'js/register.mjs').write_text('')
+        cfg = {'format': 1, 'appId': 'com.example.fixture', 'appName': 'Fixture',
+               'capacitor': 'capacitor', 'webDir': 'public', 'entry': 'application.js',
+               'ui': 'mobile.ipkg', 'assets': ['index.html']}
+        (self.project / 'iris.mobile.json').write_text(json.dumps(cfg))
+        web = self.project / 'public'; web.mkdir()
+        (web / 'index.html').write_text('<main>fixture</main><script src="app.js"></script>')
+        self.run_patch = patch.object(mobile, 'run')
+        self.run_patch.start()
+        self.addCleanup(self.run_patch.stop)
+
+    def test_git_dependency_is_resolved_instead_of_rejected(self):
+        commit = 'cafebabe' * 5
+        (self.project / 'pack.toml').write_text(
+            f'[custom.all.iris]\ntype = "git"\nurl = "https://example.test/iris.git"\n'
+            f'commit = "{commit}"\nipkg = "iris.ipkg"\n')
+        resolved = self.project / 'resolved-iris'
+        pack_tomls = []
+        def run(args, cwd):
+            pack_tomls.append((Path(cwd) / 'pack.toml').read_text())
+        mobile.run.side_effect = run
+        with patch.object(mobile, 'resolved_git_dependency', return_value=resolved) as resolver:
+            mobile.compile_ui(self.project)
+        resolver.assert_called_once_with('iris', {'type': 'git', 'url': 'https://example.test/iris.git',
+                                                   'commit': commit, 'ipkg': 'iris.ipkg'})
+        self.assertIn('[custom.all.iris]', pack_tomls[0])
+        self.assertIn(f'path = "{resolved}"', pack_tomls[0])
+        self.assertIn('ipkg = "iris.ipkg"', pack_tomls[0])
+
+    def test_unknown_dependency_type_still_fails_clearly(self):
+        (self.project / 'pack.toml').write_text(
+            '[custom.all.iris]\ntype = "registry"\nipkg = "iris.ipkg"\n')
+        with self.assertRaisesRegex(ValueError, "Unsupported Pack dependency type.*'registry'"):
+            mobile.compile_ui(self.project)
+
+
 if __name__ == '__main__':
     unittest.main()

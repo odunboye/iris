@@ -41,7 +41,7 @@ the config file is elsewhere.
 
 | Command | Behavior |
 |---|---|
-| `iris compile` | Compile the UI package selected in configuration; requires a local Pack map |
+| `iris compile` | Compile the UI package selected in configuration; resolves local and git Pack dependencies |
 | `iris build` | Bundle the existing compiled entry and allowed assets into a release |
 | `iris sync android` / `ios` | Verify the release and sync an owned native host; performs host npm install |
 | `iris open android` / `ios` | Sync, then open the platform IDE |
@@ -53,7 +53,7 @@ After public asset changes: build, then run.
 
 The wrapper accepts only the platform argument for run; it has no `--target`
 forwarding. Use an interactive terminal for device selection, or the
-[generated host CLI](../tutorials/web-to-android.md#6-know-where-the-outputs-live)
+[generated host CLI](../tutorials/web-to-android.md#5-know-where-the-outputs-live)
 with an explicit device ID.
 
 Source: [tools/iris.py](../../tools/iris.py). Configuration and ownership:

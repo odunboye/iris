@@ -35,13 +35,28 @@ def main():
         temporary = Path(directory)
         project = temporary / 'greeter'
         run([sys.executable, ROOT / 'tools/iris.py', 'new', 'greeter', '--project', project, '--target', 'web'], temporary)
-        cap = args.capacitor.resolve() if args.capacitor else temporary / 'capacitor'
-        run([sys.executable, ROOT / 'tools/iris.py', 'add', 'mobile', '--capacitor', cap,
-             '--app-id', 'com.example.greeter', '--app-name', 'Greeter'], project)
+        # No --capacitor here when the caller didn't give one: let the CLI's own
+        # remembered/auto-cloned resolution supply a real, usable checkout - the
+        # same as a reader following the tutorial as written, and the only way
+        # `iris.mobile.json`'s capacitor path is actually valid for `iris compile`
+        # (which validates it even though compiling Idris source doesn't use it).
+        add_mobile = [sys.executable, ROOT / 'tools/iris.py', 'add', 'mobile',
+                      '--app-id', 'com.example.greeter', '--app-name', 'Greeter']
+        if args.capacitor:
+            add_mobile += ['--capacitor', args.capacitor.resolve()]
+        run(add_mobile, project)
         for name in ['src/Greeter.idr', 'src/MainWeb.idr', 'src/MainMobile.idr']:
             if (project / name).read_text().strip() != snippets[name].strip():
                 raise ValueError(f'Tutorial does not match generated scaffold: {name}')
-        # The tutorial's local-map conversion, retaining generated target entries.
+        # Exercise the actual user-facing path first: `iris compile` against the
+        # untouched, freshly scaffolded pack.toml (iris still pinned as a git
+        # dependency). This is what the tutorial now tells readers to run
+        # directly, with no manual pack.toml edit.
+        run([sys.executable, ROOT / 'tools/iris.py', 'compile'], project)
+        # Below, a from-scratch raw-idris2-build pass against a *local* map -
+        # this ipkg-dir layout and already-pack-installed iris is also what the
+        # separate RequestExample.idr snippet check at the bottom needs, so it
+        # stays independent of the ./iris compile path tested just above.
         pack = project / 'pack.toml'
         text = pack.read_text()
         tail = text[text.index('[custom.all.greeter-web]'):]

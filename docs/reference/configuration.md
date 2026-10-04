@@ -16,10 +16,13 @@ Web uses `main = MainWeb` and `executable = greeter-web`. Build both with the
 JavaScript code generator. A terminal target uses `Main`, the native compiler
 backend and a C support-library prebuild step.
 
-`pack.toml` locates dependencies and registers target packages. `new` initially
-pins Iris as a git dependency. Mobile CLI compilation currently requires all
-custom dependencies to be local; see
-[the tutorial's local-map step](../tutorials/web-to-android.md#4-use-a-local-iris-dependency-for-mobile-compilation).
+`pack.toml` locates dependencies and registers target packages. `new` pins
+Iris as a git dependency by default; `compile` resolves a git dependency by
+cloning its pinned commit into a local cache the first time it's needed
+(`$XDG_CACHE_HOME/iris/deps/<name>/<commit>`, or `~/.cache/...`), the same
+pattern `--capacitor` uses. A `type = "local"` entry is still honored as-is,
+useful for an unpublished local commit - see
+[the tutorial](../tutorials/web-to-android.md#2-create-a-web-app).
 
 ## iris.mobile.json
 

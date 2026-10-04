@@ -215,6 +215,31 @@ def run(args, cwd):
     mobile_check.run(args, cwd)
 
 
+def resolved_git_dependency(name, spec):
+    # pack's own git-dependency cache only fetches what Idris compilation
+    # needs for ITS OWN resolution (the ipkg and modules it imports as a
+    # dependency), not a guaranteed-complete raw checkout - no good as a
+    # project root to hand a fresh `pack build` here. Clone and pin the
+    # exact commit ourselves instead, cached by name/commit so this only
+    # happens once per version.
+    url, commit = spec['url'], spec['commit']
+    base = Path(os.environ.get('XDG_CACHE_HOME') or (Path.home() / '.cache'))
+    cache = base / 'iris/deps' / name / commit
+    if not cache.is_dir():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        staging = cache.with_name(cache.name + '.' + uuid.uuid4().hex + '.tmp')
+        try:
+            subprocess.run(['git', 'init', '--quiet', str(staging)], check=True)
+            subprocess.run(['git', '-C', str(staging), 'fetch', '--quiet', '--depth', '1', url, commit], check=True)
+            subprocess.run(['git', '-C', str(staging), 'checkout', '--quiet', 'FETCH_HEAD'], check=True)
+            staging.rename(cache)
+        except BaseException:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
+        print(f'Cloned {name}@{commit[:12]} to {cache}')
+    return cache
+
+
 def compile_ui(project, override=None):
     project, cfg, cap, _, _ = configuration(project, override, require_entry=False)
     ui = cfg.get('ui') or read_json(project / 'flux.json')['ui']
@@ -222,9 +247,12 @@ def compile_ui(project, override=None):
     config = tomllib.loads((project / 'pack.toml').read_text())
     paths = {}
     for name, spec in config.get('custom', {}).get('all', {}).items():
-        if spec.get('type') != 'local':
-            raise ValueError('Mobile compile currently requires a local managed Pack map')
-        paths[name] = ((project / spec['path']).resolve(), spec['ipkg'])
+        if spec.get('type') == 'local':
+            paths[name] = ((project / spec['path']).resolve(), spec['ipkg'])
+        elif spec.get('type') == 'git':
+            paths[name] = (resolved_git_dependency(name, spec), spec['ipkg'])
+        else:
+            raise ValueError(f'Unsupported Pack dependency type for {name}: {spec.get("type")!r}')
     # iris-client/iris-mobile live in this checkout, alongside this script;
     # registered here as local paths, since iris-mobile isn't registered in
     # a user project's own Pack map by default (nothing in an ordinary
@@ -441,14 +469,6 @@ def new_target(project, target, module, app_value, name, force, capacitor=None, 
             'ui': target + '.ipkg', 'assets': ['index.html', '*.css'],
         })
         print('Wrote ' + str(config_path))
-        try:
-            config = tomllib.loads((project / 'pack.toml').read_text())
-            non_local = [n for n, spec in config.get('custom', {}).get('all', {}).items() if spec.get('type') != 'local']
-        except FileNotFoundError:
-            non_local = ['(no pack.toml found)']
-        if non_local:
-            print('Note: iris compile requires every pack.toml custom.all entry to be '
-                  'type = "local", including iris itself - currently not true for: ' + ', '.join(non_local))
 
 
 STARTER_MODULE = '''module {module}

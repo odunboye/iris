@@ -103,9 +103,12 @@ changes it to `Count: 1`. Stop the server with Ctrl+C. After editing Idris
 source, rebuild `web.ipkg` and reload the page.
 
 `pack.toml` pins Iris to the scaffolding checkout's current commit. That commit
-must be available from its git remote. If you scaffold from an unpublished
-local commit, use the local dependency configuration in the next step for the
-web build as well.
+must be available from its git remote: `pack build web.ipkg` resolves it
+through Pack directly, and `iris compile` (used for the mobile target in step
+4) clones it into a local cache the first time it's needed. If you scaffold
+from an unpublished local commit, replace the `[custom.all.iris]` section with
+`type = "local"` and `path = "/absolute/path/to/iris"` instead - both commands
+accept a local dependency the same way.
 
 ## 3. Add the mobile entry point
 
@@ -147,29 +150,7 @@ Canvas application inside a Capacitor WebView; it does not use Android native
 widgets. Keep the generated stylesheet linked in `public/index.html`: it sizes
 the Canvas to the viewport independently of its high-DPI bitmap.
 
-## 4. Use a local Iris dependency for mobile compilation
-
-The current `iris compile` command requires every `custom.all` dependency in
-`pack.toml` to use `type = "local"`. A freshly scaffolded project pins Iris as
-a git dependency, so it needs this one adjustment.
-
-Replace only the `[custom.all.iris]` section with the following. Use the
-**absolute path to your real Iris checkout**, replacing the example path:
-
-```toml
-[custom.all.iris]
-type = "local"
-path = "/absolute/path/to/iris"
-ipkg = "iris.ipkg"
-```
-
-Remove the old `url` and `commit` fields. Leave the generated
-`[custom.all.greeter-web]` and `[custom.all.greeter-mobile]` sections intact;
-they already use local paths. These paths are machine-specific. Record the
-Iris commit used by your release and arrange equivalent checkout paths on
-other build machines.
-
-## 5. Compile, package and run
+## 4. Compile, package and run
 
 Run these from `greeter`:
 
@@ -204,7 +185,7 @@ The generated targets share a build directory. Pack compilation can replace
 previous target executables there. When switching back to the DOM app, rebuild
 `web.ipkg` before serving it; do not assume both compiled entries remain present.
 
-## 6. Know where the outputs live
+## 5. Know where the outputs live
 
 ```text
 build/exec/greeter-mobile           # compiled app
