@@ -75,6 +75,35 @@ hidden files, symlinks and escaping paths are not copied as public assets.
 The compiled entry is supplied separately. Native identity changes are
 refused once a host exists; migration requires deliberate host management.
 
+## Scaffolding a target
+
+`./iris new` generates the boilerplate for one backend target in an existing
+project - an entry module, an ipkg, and an HTML/config shell - so the hand
+steps in [ARCHITECTURE.md](../ARCHITECTURE.md)/the counter example don't have to
+be repeated by hand every time. It does not write your model/update/view: it
+expects a module already exporting a `UIApp` value (`--app-value`, default
+`app`), e.g. `Counter.idr`'s `export counter : UIApp Nat Msg`.
+
+```sh
+./iris new --target web      --project /path/to/app --module Counter
+./iris new --target terminal --project /path/to/app --module Counter
+./iris new --target canvas   --project /path/to/app --module Counter
+./iris new --target mobile   --project /path/to/app --module Counter \
+  --capacitor /path/to/capacitor --app-id com.example.app
+```
+
+`--module`'s file is found under `--project` or `--project/src`, and the
+generated files follow it there. `--name` (default: the project directory's
+own name) sets the package/executable name (`<name>-web`, `<name>-terminal`,
+...). The `terminal` target's `prebuild` embeds this checkout's own
+`c/iristui.c` by absolute path - that native source isn't resolvable through
+Pack's dependency cache, unlike the pure-Idris targets. The `mobile` target
+also writes `iris.mobile.json` (`--app-id` required; `--app-name` defaults to
+`--name`) and warns if `pack.toml` doesn't register every
+dependency - including `iris` itself - as `type = "local"`, since `./iris
+compile`/`build` require that (see Architecture above). Existing files are
+left untouched unless `--force` is passed.
+
 ## Commands
 
 ```sh

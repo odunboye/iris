@@ -309,6 +309,88 @@ def atomic_write(path, data):
         temporary.unlink(missing_ok=True)
 
 
+NEW_TARGETS = {
+    'web':      ('MainWeb',    'Iris.Backend.Web.DOM.Run', 'runWeb'),
+    'terminal': ('Main',       'Iris.Backend.Terminal.Run', 'runTUI'),
+    'canvas':   ('MainCanvas', 'Iris.Backend.Canvas.Run', 'runCanvas'),
+    'mobile':   ('MainMobile', 'Iris.Backend.Canvas.Run', 'runMobile'),
+}
+
+
+def new_write(path, text, force):
+    if path.exists() and not force:
+        raise ValueError('Refusing to overwrite existing file (use --force): ' + str(path))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+    print('Wrote ' + str(path))
+
+
+def new_target(project, target, module, app_value, name, force, capacitor=None, app_id=None, app_name=None):
+    if target == 'mobile' and (capacitor is None or app_id is None):
+        raise ValueError('--target mobile requires --capacitor and --app-id')
+    project = project.resolve(strict=True)
+    sourcedir = next((d for d in ['.', 'src'] if (project / d / (module + '.idr')).is_file()), None)
+    if sourcedir is None:
+        raise ValueError(f'No {module}.idr in {project} or {project}/src - extract your model/update/view '
+                          f'into a module exporting `{app_value} : UIApp model msg` first, then run ./iris new again.')
+    entry_module, runner_import, runner_call = NEW_TARGETS[target]
+    new_write(project / sourcedir / (entry_module + '.idr'),
+              f'module {entry_module}\n\nimport {module}\nimport {runner_import}\n\n'
+              f'main : IO ()\nmain = {runner_call} {app_value}\n', force)
+
+    executable = f'{name}-{target}'
+    ipkg = [f'package iris-{name}-{target}', 'depends = iris', f'sourcedir = "{sourcedir}"',
+            f'main = {entry_module}', f'executable = {executable}']
+    if target == 'terminal':
+        app_dir = f'build/exec/{executable}_app'
+        c_source = str(ROOT / 'c/iristui.c')
+        ipkg.append('prebuild = "mkdir -p ' + app_dir + ' && cc -dynamiclib ' + c_source + ' -o ' + app_dir +
+                    '/libiristui.dylib 2>/dev/null || cc -shared -fPIC ' + c_source + ' -o ' + app_dir + '/libiristui.so"')
+    new_write(project / (target + '.ipkg'), '\n'.join(ipkg) + '\n', force)
+
+    title = app_name or name
+    if target == 'web':
+        new_write(project / 'index.html',
+                  '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                  f'<title>{title}</title></head><body><main id="iris-app"></main>'
+                  f'<script src="build/exec/{executable}"></script></body></html>\n', force)
+    elif target == 'canvas':
+        new_write(project / 'canvas.html',
+                  '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                  f'<title>{title}</title><link rel="stylesheet" href="canvas.css"></head><body>'
+                  '<canvas id="iris-canvas" width="640" height="480"></canvas>'
+                  f'<script src="build/exec/{executable}"></script></body></html>\n', force)
+        new_write(project / 'canvas.css',
+                  'html,body{margin:0;width:100%;height:100%;overflow:hidden}'
+                  '#iris-canvas{display:block;width:100%;height:100%;touch-action:none}\n', force)
+    elif target == 'mobile':
+        new_write(project / 'public/index.html',
+                  '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+                  '<meta name="viewport" content="width=device-width,initial-scale=1">'
+                  f'<title>{title}</title></head><body><canvas id="iris-canvas"></canvas>'
+                  '<script src="app.js"></script></body></html>\n', force)
+        config_path = project / 'iris.mobile.json'
+        if config_path.exists() and not force:
+            raise ValueError('Refusing to overwrite existing file (use --force): ' + str(config_path))
+        atomic_json(config_path, {
+            'format': 1, 'appId': app_id, 'appName': title,
+            'capacitor': str(Path(capacitor).expanduser().resolve()),
+            'webDir': 'public', 'entry': f'build/exec/{executable}',
+            'ui': target + '.ipkg', 'assets': ['index.html', '*.css'],
+        })
+        print('Wrote ' + str(config_path))
+        try:
+            config = tomllib.loads((project / 'pack.toml').read_text())
+            non_local = [n for n, spec in config.get('custom', {}).get('all', {}).items() if spec.get('type') != 'local']
+        except FileNotFoundError:
+            non_local = ['(no pack.toml found)']
+        if non_local:
+            print('Note: ./iris compile/build requires every pack.toml custom.all entry to be '
+                  'type = "local", including iris itself - currently not true for: ' + ', '.join(non_local))
+
+
 def install_cli(directory, force=False):
     directory = Path(directory).expanduser().resolve()
     directory.mkdir(parents=True, exist_ok=True)
@@ -347,6 +429,16 @@ def main(argv=None):
     installer = commands.add_parser('install-cli', help='install this launcher onto PATH')
     installer.add_argument('--bin-dir', default='~/.local/bin')
     installer.add_argument('--force', action='store_true')
+    newer = commands.add_parser('new', help='scaffold an entry module, ipkg and HTML/config shell for one target')
+    newer.add_argument('--target', required=True, choices=sorted(NEW_TARGETS))
+    newer.add_argument('--project', type=Path, default=Path.cwd())
+    newer.add_argument('--module', required=True, help='shared module exporting `app_value : UIApp model msg`, e.g. Counter')
+    newer.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
+    newer.add_argument('--name', help='base name for the package/executable (default: --project\'s directory name)')
+    newer.add_argument('--capacitor', type=Path, help='capacitor checkout; required for --target mobile')
+    newer.add_argument('--app-id', help='reverse-domain app id; required for --target mobile')
+    newer.add_argument('--app-name', help='human-readable app name; required for --target mobile (default: --name)')
+    newer.add_argument('--force', action='store_true', help='overwrite existing generated files')
     for name, help in [('setup', 'install locked npm dependencies for the library and this tooling'),
                         ('check', 'build and run the compiled Idris adapter test against the hardened bridge'),
                         ('compile', 'build the selected UI target only'),
@@ -365,6 +457,14 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command == 'install-cli':
         install_cli(args.bin_dir, args.force)
+        return
+    if args.command == 'new':
+        try:
+            new_target(args.project, args.target, args.module, args.app_value,
+                       args.name or args.project.resolve().name, args.force,
+                       args.capacitor, args.app_id, args.app_name)
+        except (OSError, ValueError) as error:
+            parser.exit(1, str(error) + '\n')
         return
     try:
         if args.command in ['setup', 'check']:

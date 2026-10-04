@@ -222,5 +222,73 @@ class MobileTests(unittest.TestCase):
         self.assertIn(str(mobile.ROOT / 'iris'), old.read_text())
 
 
+class NewScaffoldTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.project = Path(self.temp.name).resolve()
+        (self.project / 'src').mkdir()
+        (self.project / 'src/Demo.idr').write_text('module Demo\n')
+
+    def test_missing_shared_module_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'No Missing.idr'):
+            mobile.new_target(self.project, 'web', 'Missing', 'app', 'demo', force=False)
+
+    def test_web_target_uses_detected_sourcedir(self):
+        mobile.new_target(self.project, 'web', 'Demo', 'app', 'demo', force=False)
+        entry = (self.project / 'src/MainWeb.idr').read_text()
+        self.assertIn('import Demo', entry)
+        self.assertIn('import Iris.Backend.Web.DOM.Run', entry)
+        self.assertIn('main = runWeb app', entry)
+        ipkg = (self.project / 'web.ipkg').read_text()
+        self.assertIn('sourcedir = "src"', ipkg)
+        self.assertIn('executable = demo-web', ipkg)
+        self.assertNotIn('prebuild', ipkg)
+        html = (self.project / 'index.html').read_text()
+        self.assertIn('id="iris-app"', html)
+        self.assertIn('src="build/exec/demo-web"', html)
+
+    def test_terminal_target_embeds_this_checkouts_native_source(self):
+        mobile.new_target(self.project, 'terminal', 'Demo', 'app', 'demo', force=False)
+        ipkg = (self.project / 'terminal.ipkg').read_text()
+        self.assertIn(str(mobile.ROOT / 'c/iristui.c'), ipkg)
+        self.assertIn('demo-terminal_app', ipkg)
+
+    def test_canvas_target_writes_canvas_mount_and_stylesheet(self):
+        mobile.new_target(self.project, 'canvas', 'Demo', 'app', 'demo', force=False)
+        html = (self.project / 'canvas.html').read_text()
+        self.assertIn('<canvas id="iris-canvas"', html)
+        css = (self.project / 'canvas.css').read_text()
+        self.assertIn('#iris-canvas', css)
+
+    def test_mobile_target_requires_capacitor_and_app_id_before_writing_anything(self):
+        with self.assertRaisesRegex(ValueError, 'requires --capacitor and --app-id'):
+            mobile.new_target(self.project, 'mobile', 'Demo', 'app', 'demo', force=False)
+        self.assertEqual(list(self.project.glob('*.ipkg')), [])
+        self.assertFalse((self.project / 'src/MainMobile.idr').exists())
+
+    def test_mobile_target_writes_config_matching_documented_schema(self):
+        capacitor = self.project / 'capacitor'
+        capacitor.mkdir()
+        mobile.new_target(self.project, 'mobile', 'Demo', 'app', 'demo', force=False,
+                          capacitor=capacitor, app_id='com.example.demo')
+        cfg = json.loads((self.project / 'iris.mobile.json').read_text())
+        self.assertEqual(cfg['appId'], 'com.example.demo')
+        self.assertEqual(cfg['appName'], 'demo')
+        self.assertEqual(cfg['capacitor'], str(capacitor.resolve()))
+        self.assertEqual(cfg['webDir'], 'public')
+        self.assertEqual(cfg['entry'], 'build/exec/demo-mobile')
+        self.assertEqual(cfg['ui'], 'mobile.ipkg')
+        html = (self.project / 'public/index.html').read_text()
+        self.assertIn('<canvas id="iris-canvas">', html)
+        self.assertEqual(html.count('<script src="app.js">'), 1)
+
+    def test_refuses_overwrite_without_force(self):
+        mobile.new_target(self.project, 'web', 'Demo', 'app', 'demo', force=False)
+        with self.assertRaisesRegex(ValueError, 'Refusing to overwrite'):
+            mobile.new_target(self.project, 'web', 'Demo', 'app', 'demo', force=False)
+        mobile.new_target(self.project, 'web', 'Demo', 'app', 'demo', force=True)
+
+
 if __name__ == '__main__':
     unittest.main()
