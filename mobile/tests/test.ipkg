@@ -1,0 +1,7 @@
+package iris-mobile-test
+version = 0.1.0
+depends = iris-mobile
+sourcedir = "src"
+main = Main
+executable = "iris-mobile-test.js"
+opts = "--codegen javascript"

@@ -1,0 +1,10 @@
+package iris-client
+version = 0.1.0
+brief = "Generated RPC client support for Iris applications"
+depends = iris, json-simple
+sourcedir = "src"
+prebuild = "make native-client"
+modules = Iris.Client
+        , Iris.Client.Auth
+        , Iris.Client.Web
+        , Iris.Client.Native

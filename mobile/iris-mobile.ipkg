@@ -1,0 +1,7 @@
+package iris-mobile
+version = 0.2.0
+authors = "Odun Adeboye"
+brief = "Optional Capacitor commands and owned subscriptions for Iris"
+depends = iris >= 0.4.0, capacitor >= 0.3.0, async-js, iris-client
+sourcedir = "src"
+modules = Iris.Mobile, Iris.Mobile.Client, Iris.Mobile.Session

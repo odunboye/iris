@@ -2,3 +2,18 @@
 type = "local"
 path = "."
 ipkg = "iris.ipkg"
+
+[custom.all.iris-client]
+type = "local"
+path = "client"
+ipkg = "iris-client.ipkg"
+
+[custom.all.iris-mobile]
+type = "local"
+path = "mobile"
+ipkg = "iris-mobile.ipkg"
+
+[custom.all.capacitor]
+type = "local"
+path = "../capacitor"
+ipkg = "capacitor.ipkg"
