@@ -52,7 +52,10 @@ your entry module. Start with [the counter](examples/counter/README.md).
 subscription field. `Backend.Terminal.App.TUIApp` and `Widget.TUI.*` are
 terminal-specific compatibility APIs, not the portable application contract.
 The former default agent executable is preserved under `examples/legacy-agent`;
-the default executable now uses a credential-free `UIApp` counter.
+the current counter demo lives in `examples/counter` and is credential-free.
+`iris.ipkg` itself is a pure library package with no bundled executable, so
+depending on `iris` under any backend - including `--cg javascript` - never
+tries to build a terminal-only demo.
 
 See [CAPABILITIES.md](CAPABILITIES.md) before relying on runner-specific behavior.
 Desktop SDL2, embedded framebuffer and the generic PAL remain experimental.

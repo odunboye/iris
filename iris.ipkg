@@ -7,10 +7,6 @@ brief      = "Iris — cross-platform declarative UI for Idris 2"
 depends    = contrib
 
 sourcedir  = "src"
-executable = "iris-demo"
-main       = Main
-
-prebuild   = "mkdir -p build/exec/iris-demo_app && cc -dynamiclib c/iristui.c -o build/exec/iris-demo_app/libiristui.dylib 2>/dev/null || cc -shared -fPIC c/iristui.c -o build/exec/iris-demo_app/libiristui.so"
 
 modules =
   -- Universal widget + app
