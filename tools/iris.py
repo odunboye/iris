@@ -391,6 +391,66 @@ def new_target(project, target, module, app_value, name, force, capacitor=None, 
                   'type = "local", including iris itself - currently not true for: ' + ', '.join(non_local))
 
 
+STARTER_MODULE = '''module {module}
+
+import Iris
+
+data Msg = Increment
+
+update : Msg -> Nat -> (Nat, Cmd Msg)
+update Increment count = (S count, none)
+
+view : Nat -> Widget Msg
+view count = vstack
+  [ text ("Count: " ++ show count)
+  , button "Increment" Increment
+  ]
+
+export
+{app_value} : UIApp Nat Msg
+{app_value} = MkApp (0, none) update view (\\_, _ => Nothing) Nothing
+'''
+
+
+def git_iris_origin():
+    def git(*args):
+        return subprocess.run(['git', '-C', str(ROOT), *args], check=True, capture_output=True, text=True).stdout.strip()
+    return git('remote', 'get-url', 'origin'), git('rev-parse', 'HEAD')
+
+
+def new_default_project(name):
+    # Run from a project's own directory (re-scaffolding an extra target): use it as-is.
+    # Otherwise (a fresh project, run from its intended parent directory): create <name>/.
+    cwd = Path.cwd()
+    if cwd.name == name and (cwd / 'pack.toml').is_file():
+        return cwd
+    return cwd / name
+
+
+def new_project(project, name, targets, module, app_value, force, capacitor=None, app_id=None, app_name=None):
+    project = Path(project).expanduser().resolve()
+    project.mkdir(parents=True, exist_ok=True)
+    if not any((project / d / (module + '.idr')).is_file() for d in ['.', 'src']):
+        (project / 'src').mkdir(exist_ok=True)
+        module_file = project / 'src' / (module + '.idr')
+        new_write(module_file, STARTER_MODULE.format(module=module, app_value=app_value), force=False)
+        print(f'Starter module - edit {module_file} to build your actual app.')
+    pack_toml = project / 'pack.toml'
+    if not pack_toml.is_file():
+        url, commit = git_iris_origin()
+        new_write(pack_toml, f'[custom.all.iris]\ntype = "git"\nurl = "{url}"\ncommit = "{commit}"\nipkg = "iris.ipkg"\n',
+                  force=False)
+    for target in targets:
+        new_target(project, target, module, app_value, name, force, capacitor, app_id, app_name)
+        section = f'[custom.all.{name}-{target}]'
+        text = pack_toml.read_text()
+        if section not in text:
+            pack_toml.write_text(text.rstrip('\n') + f'\n\n{section}\ntype = "local"\npath = "."\nipkg = "{target}.ipkg"\n')
+            print(f'Registered {name}-{target} in pack.toml')
+    print(f"Created '{name}' in {project}. Next: pack --no-prompt install iris && "
+          + ' && '.join(f'pack --no-prompt{" --cg javascript" if t != "terminal" else ""} build {t}.ipkg' for t in targets))
+
+
 def install_cli(directory, force=False):
     directory = Path(directory).expanduser().resolve()
     directory.mkdir(parents=True, exist_ok=True)
@@ -429,15 +489,17 @@ def main(argv=None):
     installer = commands.add_parser('install-cli', help='install this launcher onto PATH')
     installer.add_argument('--bin-dir', default='~/.local/bin')
     installer.add_argument('--force', action='store_true')
-    newer = commands.add_parser('new', help='scaffold an entry module, ipkg and HTML/config shell for one target')
-    newer.add_argument('--target', required=True, choices=sorted(NEW_TARGETS))
-    newer.add_argument('--project', type=Path, default=Path.cwd())
-    newer.add_argument('--module', required=True, help='shared module exporting `app_value : UIApp model msg`, e.g. Counter')
+    newer = commands.add_parser('new', help='create a new project, or add a target to an existing one')
+    newer.add_argument('name', help='project directory name (if new) and package/executable base name')
+    newer.add_argument('--target', nargs='+', choices=sorted(NEW_TARGETS), default=None,
+                       help='targets to scaffold (default: web, plus mobile if --capacitor/--app-id are given)')
+    newer.add_argument('--project', type=Path, help="project directory (default: ./<name>)")
+    newer.add_argument('--module', help='shared module exporting `app_value : UIApp model msg` (default: <Name>, '
+                                        'generated as a starter counter if it does not already exist)')
     newer.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
-    newer.add_argument('--name', help='base name for the package/executable (default: --project\'s directory name)')
-    newer.add_argument('--capacitor', type=Path, help='capacitor checkout; required for --target mobile')
-    newer.add_argument('--app-id', help='reverse-domain app id; required for --target mobile')
-    newer.add_argument('--app-name', help='human-readable app name; required for --target mobile (default: --name)')
+    newer.add_argument('--capacitor', type=Path, help='capacitor checkout; enables the mobile target')
+    newer.add_argument('--app-id', help='reverse-domain app id; enables the mobile target')
+    newer.add_argument('--app-name', help='human-readable app name; defaults to <name>')
     newer.add_argument('--force', action='store_true', help='overwrite existing generated files')
     for name, help in [('setup', 'install locked npm dependencies for the library and this tooling'),
                         ('check', 'build and run the compiled Idris adapter test against the hardened bridge'),
@@ -460,10 +522,12 @@ def main(argv=None):
         return
     if args.command == 'new':
         try:
-            new_target(args.project, args.target, args.module, args.app_value,
-                       args.name or args.project.resolve().name, args.force,
+            project = args.project or new_default_project(args.name)
+            module = args.module or (args.name[0].upper() + args.name[1:])
+            targets = args.target or (['web', 'mobile'] if args.capacitor and args.app_id else ['web'])
+            new_project(project, args.name, targets, module, args.app_value, args.force,
                        args.capacitor, args.app_id, args.app_name)
-        except (OSError, ValueError) as error:
+        except (OSError, ValueError, subprocess.SubprocessError) as error:
             parser.exit(1, str(error) + '\n')
         return
     try:

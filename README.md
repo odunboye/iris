@@ -142,7 +142,8 @@ here from Flux's `flux mobile ...`, since it has no dependency on Flux's
 server):
 
 ```bash
-./iris new --target web --project /path/to/app --module Counter   # scaffold a target
+./iris new myapp                                 # start a new project (web target)
+./iris new myapp --target terminal canvas         # ...or add more targets, any time
 ./iris setup --capacitor /path/to/capacitor
 ./iris build --project /path/to/app
 ./iris sync ios --project /path/to/app
@@ -150,7 +151,7 @@ server):
 ```
 
 See [`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) for
-`./iris new`'s other targets, configuration, the full command reference, and
+`./iris new`'s full behavior, configuration, the full command reference, and
 ownership/publication mechanics.
 
 ## Supported scope

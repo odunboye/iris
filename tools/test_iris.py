@@ -290,5 +290,58 @@ class NewScaffoldTests(unittest.TestCase):
         mobile.new_target(self.project, 'web', 'Demo', 'app', 'demo', force=True)
 
 
+class NewProjectTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.origin_patch = patch.object(mobile, 'git_iris_origin', return_value=('https://example.test/iris.git', 'deadbeef'))
+        self.origin_patch.start()
+        self.addCleanup(self.origin_patch.stop)
+
+    def test_fresh_project_generates_starter_module_config_and_target(self):
+        project = self.root / 'greeter'
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+        self.assertIn('export\napp : UIApp', (project / 'src/Greeter.idr').read_text())
+        toml = (project / 'pack.toml').read_text()
+        self.assertIn('url = "https://example.test/iris.git"', toml)
+        self.assertIn('commit = "deadbeef"', toml)
+        self.assertIn('[custom.all.greeter-web]', toml)
+        self.assertTrue((project / 'src/MainWeb.idr').is_file())
+        self.assertTrue((project / 'web.ipkg').is_file())
+        self.assertTrue((project / 'index.html').is_file())
+
+    def test_rerun_with_existing_module_adds_target_without_touching_it(self):
+        project = self.root / 'greeter'
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+        original = (project / 'src/Greeter.idr').read_text()
+        mobile.new_project(project, 'greeter', ['canvas'], 'Greeter', 'app', force=False)
+        self.assertEqual((project / 'src/Greeter.idr').read_text(), original)
+        toml = (project / 'pack.toml').read_text()
+        self.assertIn('[custom.all.greeter-web]', toml)
+        self.assertIn('[custom.all.greeter-canvas]', toml)
+        self.assertTrue((project / 'canvas.ipkg').is_file())
+
+    def test_rerun_same_target_without_force_fails_cleanly(self):
+        project = self.root / 'greeter'
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+        with self.assertRaisesRegex(ValueError, 'Refusing to overwrite'):
+            mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+
+    def test_default_project_reuses_cwd_inside_existing_project(self):
+        project = self.root / 'greeter'
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+        with patch.object(mobile.Path, 'cwd', return_value=project):
+            self.assertEqual(mobile.new_default_project('greeter'), project)
+
+    def test_default_project_creates_subdirectory_from_parent(self):
+        with patch.object(mobile.Path, 'cwd', return_value=self.root):
+            self.assertEqual(mobile.new_default_project('greeter'), self.root / 'greeter')
+        # Same-named cwd with no pack.toml yet (not actually inside a project) still nests.
+        namesake = self.root / 'greeter'; namesake.mkdir()
+        with patch.object(mobile.Path, 'cwd', return_value=namesake):
+            self.assertEqual(mobile.new_default_project('greeter'), namesake / 'greeter')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -75,34 +75,49 @@ hidden files, symlinks and escaping paths are not copied as public assets.
 The compiled entry is supplied separately. Native identity changes are
 refused once a host exists; migration requires deliberate host management.
 
-## Scaffolding a target
+## Starting a project
 
-`./iris new` generates the boilerplate for one backend target in an existing
-project - an entry module, an ipkg, and an HTML/config shell - so the hand
-steps in [ARCHITECTURE.md](../ARCHITECTURE.md)/the counter example don't have to
-be repeated by hand every time. It does not write your model/update/view: it
-expects a module already exporting a `UIApp` value (`--app-value`, default
-`app`), e.g. `Counter.idr`'s `export counter : UIApp Nat Msg`.
+`./iris new <name>` is a project starter, the same shape as `pack new bin
+<name>`: run from the intended parent directory with no project yet at
+`./<name>`, it creates one from nothing - a starter model module (a trivial
+counter exporting `app : UIApp Nat Msg`), `pack.toml` (pinning `iris` as a
+git dependency at this checkout's current commit), and one backend target
+(`web` by default) with its entry module, ipkg and HTML shell.
 
 ```sh
-./iris new --target web      --project /path/to/app --module Counter
-./iris new --target terminal --project /path/to/app --module Counter
-./iris new --target canvas   --project /path/to/app --module Counter
-./iris new --target mobile   --project /path/to/app --module Counter \
-  --capacitor /path/to/capacitor --app-id com.example.app
+./iris new greeter                                              # web, starter module
+./iris new greeter --target terminal canvas                     # multiple targets at once
+./iris new greeter --capacitor /path/to/capacitor --app-id com.example.greeter
+                                                                  # web + mobile (both need
+                                                                  # --capacitor/--app-id to
+                                                                  # be included by default)
 ```
 
-`--module`'s file is found under `--project` or `--project/src`, and the
-generated files follow it there. `--name` (default: the project directory's
-own name) sets the package/executable name (`<name>-web`, `<name>-terminal`,
-...). The `terminal` target's `prebuild` embeds this checkout's own
-`c/iristui.c` by absolute path - that native source isn't resolvable through
-Pack's dependency cache, unlike the pure-Idris targets. The `mobile` target
-also writes `iris.mobile.json` (`--app-id` required; `--app-name` defaults to
-`--name`) and warns if `pack.toml` doesn't register every
-dependency - including `iris` itself - as `type = "local"`, since `./iris
-compile`/`build` require that (see Architecture above). Existing files are
-left untouched unless `--force` is passed.
+Run again from inside (or naming) an existing project to add another target
+without touching what's already there - the starter module, `pack.toml` and
+any previously generated target are left alone, and the new target's own
+`[custom.all.<name>-<target>]` entry is appended:
+
+```sh
+cd greeter && ./iris new greeter --target mobile --capacitor /path/to/capacitor --app-id com.example.greeter
+```
+
+`--module` (default: `<Name>`, the project name capitalized) only matters
+once - if that file already exists, `new` scaffolds around it instead of
+generating a starter, so a hand-written model module works the same as a
+generated one on every later `--target` run. `--name` is positional and
+always required; it names the directory (when creating fresh), the default
+module, and the package/executable base name (`<name>-web`,
+`<name>-terminal`, ...). The `terminal` target's `prebuild` embeds this
+checkout's own `c/iristui.c` by absolute path - that native source isn't
+resolvable through Pack's dependency cache, unlike the pure-Idris targets.
+The `mobile` target also writes `iris.mobile.json` (`--app-id` required;
+`--app-name` defaults to `<name>`) and warns if `pack.toml` doesn't register
+every dependency - including `iris` itself - as `type = "local"`, since
+`./iris compile`/`build` require that (see Architecture above); a freshly
+created project's `pack.toml` never satisfies this on its own, since `iris`
+is pinned as a git dependency there. Existing files are left untouched
+unless `--force` is passed.
 
 ## Commands
 
