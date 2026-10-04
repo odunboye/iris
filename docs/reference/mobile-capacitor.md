@@ -25,10 +25,12 @@ storage snapshot, watcher injection or automatic RPC replay.
 `iris-mobile` and `iris-client` already live in this checkout (`mobile/`,
 `client/`), alongside `capacitor` (resolved via `--capacitor` or this repo's
 own `pack.toml` sibling alias). `./iris compile` adds all three in a
-**temporary** Pack map derived from the application's existing local map;
-ordinary `pack.toml` files and server dependency registrations are not
-rewritten. Prefer a separate mobile UI ipkg if only the mobile target
-imports `Iris.Mobile`.
+**temporary** Pack map derived from the application's existing map, resolving
+any `type = "git"` entry there - including a freshly scaffolded project's
+`iris` pin - by cloning its pinned commit into a local cache first; ordinary
+`pack.toml` files and server dependency registrations are not rewritten.
+Prefer a separate mobile UI ipkg if only the mobile target imports
+`Iris.Mobile`.
 
 ## Configuration
 
@@ -119,14 +121,13 @@ target also writes `iris.mobile.json`. `--app-id` defaults to
 `com.example.<name>` (non-alphanumeric characters stripped, a leading
 `app` added if what's left wouldn't start with a letter) when not given -
 printed so it isn't missed, and meant to be changed before a real release,
-not shipped as-is. `--app-name` defaults to the project name. `new`/`add`
-warn if `pack.toml` doesn't register every
-dependency - including `iris` itself - as `type = "local"`, since `./iris
-compile` requires that (see Architecture above); a freshly created
-project's `pack.toml` never satisfies this on its own, since `iris` is pinned
-as a git dependency there. `add` refuses to overwrite an existing target's
-files unless `--force` is passed; `new` never needs `--force`, since it
-always starts from nothing.
+not shipped as-is. `--app-name` defaults to the project name. `./iris compile`
+resolves every `pack.toml` dependency automatically, whether registered as
+`type = "local"` or `type = "git"` (see Architecture above and
+[configuration](configuration.md)); a freshly created project's `iris` entry
+is pinned as `type = "git"` by default and needs no edit. `add` refuses to
+overwrite an existing target's files unless `--force` is passed; `new` never
+needs `--force`, since it always starts from nothing.
 
 Neither command needs `--capacitor` at all, let alone typed out each time.
 Resolution order, cheapest first: an explicit `--capacitor`; the path
