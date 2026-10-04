@@ -51,25 +51,32 @@ the Iris checkout. Keep that checkout available; regenerate or edit the
 
 ## Grow into namespaces
 
-When the shared module becomes unwieldy, move it behind modules such as:
+When the shared module becomes unwieldy, split its pieces into a namespaced
+subdirectory, but keep the barrel module and every entry module flat at
+`src/` - that's the pattern [Todo](../../examples/todo) actually uses, not a
+hypothetical:
 
 ```text
 src/
   Greeter/
-    App.idr
     Model.idr
     Update.idr
     View.idr
-    Entry/
-      Web.idr
-      Mobile.idr
+  GreeterApp.idr
+  Main.idr
+  MainWeb.idr
+  MainMobile.idr
 ```
 
-Use `module Greeter.Entry.Mobile` in the corresponding file and set
-`main = Greeter.Entry.Mobile` in `mobile.ipkg`. Import `Greeter.App` from both
-entry modules. This is a manual refactor; the current `add` scaffolder uses the
-flat entry names above. Keep a small root `Greeter.idr` facade if you still
-want to use its default module discovery.
+`GreeterApp.idr` imports `Greeter.Model`/`Greeter.Update`/`Greeter.View` and
+exports the `UIApp` value (`todoApp`'s role - see
+[`TodoApp.idr`](../../examples/todo/src/TodoApp.idr)); each entry module stays
+a plain `module MainWeb` importing `GreeterApp`, unchanged from the flat
+layout. Don't nest the entry modules themselves under `Greeter.Entry.*`: it
+buys nothing over the flat names already here, and it's not what
+[Todo's own entry modules](../../examples/todo/src/MainMobile.idr) do. This is
+a manual refactor; the current `add` scaffolder generates the flat entry names
+above and expects a flat `--module` to import, not a namespaced one.
 
 ## Source control
 
