@@ -39,7 +39,7 @@ def check(directory, name, banner, key=b'q', expected=None):
             if process.poll() is not None:
                 break
         assert banner in output, output.decode(errors='replace')
-        if name == 'iris-demo':
+        if name == 'counter-terminal':
             os.write(master, b'i')
             deadline = time.monotonic() + 5
             while time.monotonic() < deadline and b'Count: 1' not in output:
@@ -79,7 +79,7 @@ def check(directory, name, banner, key=b'q', expected=None):
 
 
 if __name__ == '__main__':
-    check(ROOT, 'iris-demo', b'Count: 0')
+    check(ROOT / 'examples/counter', 'counter-terminal', b'Count: 0')
     check(ROOT / 'examples/todo', 'iris-todo', b'Iris Todo')
 
     for key in [b'q', b'\x03']:
