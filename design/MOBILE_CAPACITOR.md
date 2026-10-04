@@ -1,17 +1,15 @@
 # Optional Capacitor integration
 
 This covers this repo's own application-packaging/build CLI for Capacitor
-targets (`./iris setup/check/compile/build/sync/open/run`), moved here from
-[odunboye/flux](https://github.com/odunboye/flux) (as `flux mobile *`) since
-it has no dependency on Flux's server - it packages whatever UI application
-you point it at. The `Iris.Mobile` library itself (Capacitor command/
-subscription bindings, native session persistence) has its own
-[mobile library guide](../mobile/README.md).
+targets (`./iris setup/check/compile/build/sync/open/run/new/add`) - it
+packages whatever UI application you point it at. The `Iris.Mobile` library
+itself (Capacitor command/subscription bindings, native session persistence)
+has its own [mobile library guide](../mobile/README.md).
 
 ## Architecture
 
 ```
-Application (Chequra)
+Application
     -> Iris.Mobile commands / owned subscriptions
     -> capacitor 0.3 typed bindings + one registered JS bridge
     -> Capacitor 8.4.3
@@ -34,8 +32,9 @@ imports `Iris.Mobile`.
 
 ## Configuration
 
-Add `iris.mobile.json` beside an application's `flux.json` (or pass an explicit
-`--config FILE` for a disposable packaging experiment):
+Add `iris.mobile.json` to the application's project directory (or pass an
+explicit `--config FILE` for a disposable packaging experiment) - `./iris
+new`/`add` write this for you (see below):
 
 ```json
 {
@@ -62,11 +61,10 @@ The explicit format-2 opt-in binds `connect-src` to only the configured HTTPS AP
 other directives are preserved, and duplicate directives/script overrides are
 rejected. Runtime configuration is immutable and initializes before the app.
 
-`ui` is optional and otherwise comes from `flux.json` (a full-stack
-application's own config file, from whichever framework the application's
-server uses - packaging itself does not depend on Flux). Other keys are
-required; unknown and duplicate keys are rejected. Paths resolve relative to
-`--project`, even with an external config file. `entry` is a compiled,
+`ui` names the UI ipkg to compile for this target; `./iris new`/`add` always
+set it. Other keys are required; unknown and duplicate keys are rejected.
+Paths resolve relative to `--project`, even with an external config file.
+`entry` is a compiled,
 standalone Idris browser program. `webDir/index.html` must have exactly one
 `<script src="app.js"></script>` (or its module equivalent); packaging
 replaces it with the bundled module entry. Public assets are an explicit
@@ -160,7 +158,7 @@ mobile was asked for by name.
 ./iris open ios --project /path/to/app
 ./iris run android --project /path/to/app
 
-./iris install-cli  # install this launcher onto PATH, like ./flux install-cli
+./iris install-cli  # install this launcher onto PATH
 ```
 
 Setup is explicit and runs locked npm installs for the library and this
@@ -200,29 +198,6 @@ and store submission are application responsibilities.
 Checkouts, compiler output and installed dependencies are trusted build inputs.
 Hashes detect local release modification; they are not code signing or a complete
 supply-chain attestation. The compiler/dependency caches remain Pack's concern.
-
-## Chequra validation and remaining work
-
-Chequra (an external Flux application) was packaged using an external
-temporary config, without changing its source, authentication, ledger schema
-or ordinary web/server configuration. Its bundled UI boots in Chromium with
-registered plugins, and both native projects sync successfully. Unsigned iOS
-Simulator Debug and Android Debug APK builds pass. These are packaging/build
-checks, **not device-level behavioral certification**.
-
-The ordinary Chequra web entry uses a relative API origin. Networked mobile apps
-must use a separate entry calling `Iris.Mobile.Client.mobileClient`, with explicit
-format-2 configuration and server origin/CORS policy - see iris-mobile's own
-README for the transport's guarantees (origin binding, no redirects/cookies/
-retries, bounded streaming) and native session persistence. Hosted deployment
-remains separate work. No hosted backend or payment/card service is created by
-this integration.
-
-Camera, biometrics, app lifecycle/back/deep-link plugin bindings,
-notifications, permission flows and device accessibility testing are subsequent
-capabilities—not implied by the five existing plugins. One-shot cancellation
-suppresses delivery but cannot undo a started native action. Monitoring restarts
-must be explicit and must not replay writes.
 
 ## Tests
 
