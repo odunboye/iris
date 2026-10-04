@@ -1,6 +1,6 @@
 # Iris Mobile (optional preview)
 
-`Chequra → Iris.Mobile → capacitor → Capacitor`.
+`Application → Iris.Mobile → capacitor → Capacitor`.
 
 This package adapts the existing typed library; it does not implement a second
 JavaScript/native bridge or replace the DOM/Canvas renderer. It is intentionally
