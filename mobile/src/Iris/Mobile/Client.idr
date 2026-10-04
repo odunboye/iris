@@ -7,13 +7,13 @@ import public Iris.Effect.Http.Web
 
 %default covering
 
-%foreign "browser:lambda: () => globalThis.FluxMobile?.apiOrigin || ''"
+%foreign "browser:lambda: () => globalThis.IrisMobile?.apiOrigin || ''"
 prim__origin : PrimIO String
 
-%foreign "browser:lambda: () => globalThis.FluxMobileTransport ? 1 : 0"
+%foreign "browser:lambda: () => globalThis.IrisMobileTransport ? 1 : 0"
 prim__ready : PrimIO Bool
 
-%foreign "browser:lambda: (method,url,headers,body,timeout,limit,done,w) => globalThis.FluxMobileTransport.request(method,url,headers,body,timeout,limit,(status,text)=>done(status)(text)(w))"
+%foreign "browser:lambda: (method,url,headers,body,timeout,limit,done,w) => globalThis.IrisMobileTransport.request(method,url,headers,body,timeout,limit,(status,text)=>done(status)(text)(w))"
 prim__request : String -> String -> String -> String -> Int -> Int ->
                 (Int -> String -> PrimIO ()) -> PrimIO AnyPtr
 

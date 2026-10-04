@@ -1,0 +1,3 @@
+#!/bin/sh
+# Repository-local Capacitor packaging CLI; public package distribution is forthcoming.
+exec python3 "$(dirname "$0")/tools/iris.py" "$@"

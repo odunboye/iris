@@ -69,30 +69,33 @@ owned host, and sets Capacitor `loggingBehavior: 'none'`. The vault refuses acce
 with bridge logging enabled because SDK debug logs can expose payloads. Modified
 managed dependency files are rejected rather than silently adopted.
 
-[odunboye/flux](https://github.com/odunboye/flux)'s `packages/mobile/tests/native_probe.py`
-runs actual vault operations against this library on new owned iOS
-Simulator/Android emulator instances, driven through Flux's own `flux mobile
-build/sync` CLI (it needs a real packaged application, not just this
-library). It requires installed SDK runtimes, Node 22+, Xcode on macOS for
-iOS, and Java 21 for Android. It does not use or wipe existing devices,
+This repo's own `tools/native_probe.py` runs actual vault operations against
+this library on new owned iOS Simulator/Android emulator instances, driven
+through `./iris build/sync` (it needs a real packaged application, not just
+this library). It requires installed SDK runtimes, Node 22+, Xcode on macOS
+for iOS, and Java 21 for Android. It does not use or wipe existing devices,
 contacts no API, and removes its scratch devices/apps afterward.
 Physical-device, biometric and full application lifecycle validation remain separate.
 
 ## Packaging and CLI
 
 Application packaging/staging/release tooling
-(`flux mobile setup/check/compile/build/sync/open/run`) lives in
-[odunboye/flux](https://github.com/odunboye/flux) - see its
-[mobile integration design](https://github.com/odunboye/flux/blob/main/design/MOBILE_CAPACITOR.md).
-That CLI treats this package the same way it treats `capacitor` itself: an
-external dependency, not something vendored into an application's workspace
-map.
+(`./iris setup/check/compile/build/sync/open/run`, moved here from
+[odunboye/flux](https://github.com/odunboye/flux) - see the
+[mobile integration design](../design/MOBILE_CAPACITOR.md)) treats `capacitor`
+as an external dependency, not something vendored into an application's
+workspace map.
 
 ## Verification
 
 From this repo's root, with a sibling `capacitor` checkout (see this repo's
-own `pack.toml` for the expected `../capacitor` path, or point `--capacitor`
-elsewhere via Flux's `tools/mobile_check.py`):
+own `pack.toml` for the expected `../capacitor` path):
+
+```sh
+./iris check --capacitor /path/to/capacitor
+```
+
+Or directly, pointing `--capacitor` anywhere:
 
 ```sh
 pack --no-prompt build mobile/iris-mobile.ipkg

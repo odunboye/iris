@@ -132,6 +132,23 @@ make native-check
 See [`WEB_MOBILE_COMPLETION.md`](WEB_MOBILE_COMPLETION.md) for the complete
 release checklist.
 
+## Packaging CLI
+
+`./iris` packages a compiled Iris application for a Capacitor WebView (moved
+here from Flux's `flux mobile ...`, since it has no dependency on Flux's
+server):
+
+```bash
+./iris setup --capacitor /path/to/capacitor
+./iris build --project /path/to/app
+./iris sync ios --project /path/to/app
+./iris install-cli   # install this launcher onto PATH
+```
+
+See [`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) for
+configuration, the full command reference, and ownership/publication
+mechanics.
+
 ## Supported scope
 
 See [the capability matrix](CAPABILITIES.md) for controls, layout, input, focus,
