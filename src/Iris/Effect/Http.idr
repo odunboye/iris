@@ -11,7 +11,7 @@
 module Iris.Effect.Http
 
 import System.File
-import Iris.State.TEA
+import Iris.Effect.Command
 
 -- ─── Request / Response ──────────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ splitAtLastNL s =
 -- A per-request-unique, hard-to-guess temp file for `--data @<path>` -
 -- fixes a real bug the old fixed `/tmp/iris_http_body.json` path had:
 -- every native HTTP `Cmd` runs its curl subprocess on a background
--- thread (`Task`/`StreamTask` - see `Iris.State.TEA`), so two requests
+-- thread (`Task`/`StreamTask` - see `Iris.Effect.Command`), so two requests
 -- in flight at once raced on that ONE shared filename - request B's
 -- `writeFile` could overwrite request A's body before A's own curl
 -- process got around to reading `@<path>`, sending B's (possibly

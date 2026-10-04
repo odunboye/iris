@@ -14,7 +14,7 @@ CI is the source of truth for supported combinations.
 
 ## Stable application surface
 
-`Iris.App.UIApp`, `Iris.Widget`, `Iris.State.TEA.Cmd`, and
+`Iris.App.UIApp`, `Iris.Widget`, `Iris.Effect.Command.Cmd`, and
 `Iris.Platform.Event` are the supported application API. The specialized
 terminal, DOM, and Canvas runners are the supported runtimes.
 
@@ -61,3 +61,52 @@ See [CAPABILITIES.md](CAPABILITIES.md) before relying on runner-specific behavio
 Desktop SDL2, embedded framebuffer and the generic PAL remain experimental.
 Their presence in the package manifest does not confer supported status.
 Future design proposals are in [FUTURE_DESIGN.md](FUTURE_DESIGN.md).
+
+## Explicit identity and finite effects
+
+Use `sKey "account-name" defaultStyle` on interactive DOM controls whose position
+can change. Keys are unique across the page and belong to logical controls, not
+list positions. DOM patching preserves keyed siblings; moving a control beneath
+a different parent can recreate it. Canvas ignores this DOM-specific key for now.
+Unkeyed controls retain positional compatibility behavior.
+
+Use `CompletingTask` for finite asynchronous operations: deliver the result, then
+call the provided completion action. Completion retires cleanup and rejects later
+messages. `CancellableTask` remains the ongoing-listener contract. Starters return
+promptly; their returned action releases resources on cancellation. Completion is
+idempotent and may happen before registration returns. Custom command interpreters
+must add a CompletingTask case. Style's positional constructor gains a Maybe String
+key before secret; prefer modifiers over positional construction.
+
+Batch starts commands in list order. This does not guarantee result order or
+parallel execution: browser raw Task runs inline; terminal raw Task runs on a worker.
+
+## Control metadata and compatibility imports
+
+`Style.control : ControlOptions` holds disabled/read-only state, accessible name,
+description, validation error and an optional focus request token. Prefer
+`sDisabled`, `sReadOnly`, `sAccessibleName`, `sDescription`, `sInvalid` and `sFocus`
+over positional constructors. `MkStyle` gains `defaultControl` before `secret`.
+Start from `defaultStyle` each view to clear metadata that no longer applies.
+
+DOM and Canvas overlays map these fields to native attributes and reject disabled
+activation and disabled/read-only text editing. Read-only applies to text inputs;
+use disabled for buttons and checkboxes. Canvas hit testing ignores disabled
+controls. Terminal renders disabled controls dimmed; application-defined keyboard
+handlers still own editing, focus and validation. Update functions must validate
+business actions regardless of widget metadata.
+
+Focus requires `sKey` and `sFocus token`. An unchanged token does not steal focus
+on a later update; increment it to request focus again. Disabled controls defer
+requests. Removing a keyed control retires its remembered token. Focus requests
+apply to browser controls, including the Canvas overlay, not terminal input.
+
+Supported code imports `Iris` or `Iris.Effect.Command`. `Iris.State.TEA` re-exports
+commands for old unqualified imports and retains `App`, `Sub` and `simpleApp`.
+Fully qualified command names move from `Iris.State.TEA.*` to
+`Iris.Effect.Command.*`; update those annotations and qualified constructors.
+`import Iris` no longer exposes the legacy App/Sub/simpleApp surface.
+
+Canvas hit targets now retain Style through `StyledTarget`. Use `targetStyle`,
+`targetId`, `targetRect` and `bareTarget` instead of assuming every target is a
+bare ButtonTarget/CheckboxTarget/InputTarget constructor.

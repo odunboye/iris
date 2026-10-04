@@ -1,3 +1,26 @@
+## Unreleased
+
+- Add ControlOptions and style modifiers for disabled/read-only state, accessible
+  names, descriptions, validation errors and keyed browser focus requests.
+- DOM and Canvas reject disabled activation and disabled/read-only edits. Canvas
+  preserves control style in hit targets, supports password fields and native
+  Space/arrow editing. Terminal dims disabled controls; application input stays
+  explicit. Add a shared account form and backend acceptance checks.
+- Move shared commands to Iris.Effect.Command; the public Iris facade no longer
+  exports the legacy App/Sub/simpleApp contract. Iris.State.TEA still re-exports
+  commands for unqualified legacy imports. Fully qualified TEA command references
+  migrate to Iris.Effect.Command. See API_STABILITY.md for constructor changes.
+
+- DOM controls support explicit `sKey` identities and incremental patching,
+  preserving native nodes, focus and selection across sibling insertion/reordering.
+- `CompletingTask` retires finite effect cleanup on completion. Browser HTTP,
+  mobile RPC and one-shot plugin commands use it; listeners keep `CancellableTask`.
+- Terminal finite completion is marshalled onto the owner loop.
+- `Batch` starts commands in list order; asynchronous work may overlap.
+- `Style` gains an optional key field. Prefer defaultStyle plus modifiers to
+  positional MkStyle construction; existing positional construction needs Nothing
+  before the secret field. Custom Cmd interpreters must handle CompletingTask.
+
 # Changelog
 
 All notable changes to Flux UI are recorded here. The project follows Semantic

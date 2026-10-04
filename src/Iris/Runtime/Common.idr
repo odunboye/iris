@@ -2,7 +2,7 @@
 module Iris.Runtime.Common
 
 import Data.IORef
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.App
 
 private
@@ -28,6 +28,7 @@ execCmd command send quitRef = do
       Task action => action >>= sendUnlessQuit quitRef send
       StreamTask action => action (sendUnlessQuit quitRef send)
       CancellableTask start => ignore (start (sendUnlessQuit quitRef send))
+      CompletingTask start => ignore (start (sendUnlessQuit quitRef send) (pure ()))
       QuitApp => writeIORef quitRef True
 
 ||| Apply a message only while the application is alive. This check belongs in
@@ -49,7 +50,8 @@ record RuntimeControl where
   quit          : IORef Bool
   paused        : IORef Bool
   generation    : IORef Nat
-  cancellations : IORef (List (IO ()))
+  cancellations : IORef (List (Nat, IO ()))
+  nextEffect    : IORef Nat
 
 public export
 newRuntimeControl : IORef Bool -> IO RuntimeControl
@@ -57,7 +59,8 @@ newRuntimeControl quitRef = do
   pausedRef <- newIORef False
   generationRef <- newIORef 0
   cancellationRef <- newIORef []
-  pure (MkRuntimeControl quitRef pausedRef generationRef cancellationRef)
+  nextRef <- newIORef 0
+  pure (MkRuntimeControl quitRef pausedRef generationRef cancellationRef nextRef)
 
 public export
 cancelActiveEffects : RuntimeControl -> IO ()
@@ -65,7 +68,7 @@ cancelActiveEffects control = do
   actions <- readIORef control.cancellations
   writeIORef control.cancellations []
   modifyIORef control.generation S
-  sequence_ actions
+  traverse_ (\(_, action) => action) actions
 
 public export
 suspendRuntime : RuntimeControl -> IO ()
@@ -108,7 +111,31 @@ execCmdManaged command send control = do
         current <- readIORef control.generation
         if stopped || suspended || current /= generation
           then cancel
-          else modifyIORef control.cancellations (cancel ::)
+          else do
+            effectId <- readIORef control.nextEffect
+            modifyIORef control.nextEffect S
+            modifyIORef control.cancellations ((effectId, cancel) ::)
+      CompletingTask start => do
+        effectId <- readIORef control.nextEffect
+        modifyIORef control.nextEffect S
+        finished <- newIORef False
+        let complete : IO ()
+            complete = do
+              writeIORef finished True
+              modifyIORef control.cancellations (filter (\(id, _) => id /= effectId))
+            deliver : msg -> IO ()
+            deliver message = do
+              done <- readIORef finished
+              when (not done) (guarded message)
+        cancel <- start deliver complete
+        stopped <- readIORef control.quit
+        suspended <- readIORef control.paused
+        current <- readIORef control.generation
+        done <- readIORef finished
+        if done then pure ()
+          else if stopped || suspended || current /= generation
+            then cancel
+            else modifyIORef control.cancellations ((effectId, cancel) ::)
       QuitApp => do
         writeIORef control.quit True
         cancelActiveEffects control

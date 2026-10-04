@@ -91,4 +91,74 @@ main = do
   repeatCount <- readIORef earlyCancel
   assert "early cleanup runs exactly once" (repeatCount == 1)
 
+  finiteQuit <- newIORef False
+  finiteControl <- newRuntimeControl finiteQuit
+  finiteModel <- newIORef 0
+  finiteCancelled <- newIORef 0
+  finishRef <- newIORef (pure ())
+  sendRef <- newIORef (\_ => pure ())
+  let finite = CompletingTask (\send, complete => do
+        writeIORef sendRef send
+        writeIORef finishRef complete
+        pure (modifyIORef finiteCancelled S))
+  execCmdManaged finite (dispatchManaged app finiteModel finiteControl) finiteControl
+  registered <- readIORef finiteControl.cancellations
+  assert "finite effect registered while pending" (length registered == 1)
+  finiteSend <- readIORef sendRef
+  finiteSend Add
+  finish <- readIORef finishRef
+  finish
+  finish
+  finiteSend Add
+  remaining <- readIORef finiteControl.cancellations
+  delivered <- readIORef finiteModel
+  assert "completion retires cleanup" (null remaining)
+  assert "completed effects reject further messages" (delivered == 1)
+  cancelActiveEffects finiteControl
+  finiteCount <- readIORef finiteCancelled
+  assert "completed cleanup is not cancelled" (finiteCount == 0)
+  traverse_ (\_ => execCmdManaged (CompletingTask (\send, complete => do
+    send Add
+    complete
+    pure (modifyIORef finiteCancelled S)))
+    (dispatchManaged app finiteModel finiteControl) finiteControl) (the (List Nat) [1..1000])
+  retained <- readIORef finiteControl.cancellations
+  assert "synchronous completed requests do not accumulate" (null retained)
+  execCmdManaged finite (dispatchManaged app finiteModel finiteControl) finiteControl
+  suspendRuntime finiteControl
+  finishAfterCancel <- readIORef finishRef
+  finishAfterCancel
+  cancelActiveEffects finiteControl
+  cancelledOnce <- readIORef finiteCancelled
+  assert "pending finite effect cancelled exactly once" (cancelledOnce == 1)
+
+  raceQuit <- newIORef False
+  raceControl <- newRuntimeControl raceQuit
+  raceCancelled <- newIORef 0
+  execCmdManaged (CompletingTask (\_, complete => do
+    complete
+    execCmdManaged QuitApp (the (Msg -> IO ()) (\_ => pure ())) raceControl
+    pure (modifyIORef raceCancelled S))) (the (Msg -> IO ()) (\_ => pure ())) raceControl
+  raceCount <- readIORef raceCancelled
+  assert "completion before synchronous quit does not cancel completed work" (raceCount == 0)
+
+  overlapQuit <- newIORef False
+  overlapControl <- newRuntimeControl overlapQuit
+  firstFinish <- newIORef (pure ())
+  secondFinish <- newIORef (pure ())
+  execCmdManaged (CompletingTask (\_, complete => do
+    writeIORef firstFinish complete
+    pure (pure ()))) (the (Msg -> IO ()) (\_ => pure ())) overlapControl
+  execCmdManaged (CompletingTask (\_, complete => do
+    writeIORef secondFinish complete
+    pure (pure ()))) (the (Msg -> IO ()) (\_ => pure ())) overlapControl
+  finishFirst <- readIORef firstFinish
+  finishFirst
+  onePending <- readIORef overlapControl.cancellations
+  assert "completion only retires its own effect" (length onePending == 1)
+  finishSecond <- readIORef secondFinish
+  finishSecond
+  noPending <- readIORef overlapControl.cancellations
+  assert "overlapping completions retire independently" (null noPending)
+
   putStrLn "Runtime tests passed"

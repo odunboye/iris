@@ -14,7 +14,7 @@ module Iris.Backend.Terminal.Run
 import Data.IORef
 import System.Concurrency
 import System.Future
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Platform.Event
 import Iris.App as UIApp
 import Iris.Widget
@@ -29,14 +29,14 @@ import Iris.Backend.Terminal.WidgetRender
 -- Cooperative starters run on the owner loop so cleanup registration cannot
 -- race with shutdown. They must return promptly after starting asynchronous IO.
 -- Raw Task/StreamTask retain their asynchronous execution but cannot be killed.
-export covering
-execCmd : Cmd outMsg -> (outMsg -> IO ()) -> RuntimeControl -> IO ()
-execCmd command send control = do
+covering
+execCmdScheduled : (IO () -> IO ()) -> Cmd outMsg -> (outMsg -> IO ()) -> RuntimeControl -> IO ()
+execCmdScheduled retire command send control = do
   stopped <- readIORef control.quit
   when (not stopped) $ case command of
     None => pure ()
-    Batch commands => traverse_ (\next => execCmd next send control) commands
-    MapCmd f nested => execCmd nested (send . f) control
+    Batch commands => traverse_ (\next => execCmdScheduled retire next send control) commands
+    MapCmd f nested => execCmdScheduled retire nested (send . f) control
     Task action => ignore $ forkIO $ do
       stopped <- readIORef control.quit
       unless stopped (action >>= deliver)
@@ -44,6 +44,7 @@ execCmd command send control = do
       stopped <- readIORef control.quit
       unless stopped (action deliver)
     CancellableTask start => Common.execCmdManaged (CancellableTask start) send control
+    CompletingTask start => Common.execCmdManaged (CompletingTask (\deliver, complete => start deliver (retire complete))) send control
     QuitApp => Common.execCmdManaged QuitApp send control
   where
     deliver : outMsg -> IO ()
@@ -51,27 +52,36 @@ execCmd command send control = do
       stopped <- readIORef control.quit
       unless stopped (send message)
 
+||| Low-level executor. Finite completion callbacks must run on the owner thread.
+||| runTUI marshals these through its channel automatically.
+export covering
+execCmd : Cmd msg -> (msg -> IO ()) -> RuntimeControl -> IO ()
+execCmd = execCmdScheduled (\action => action)
+
 -- Messages always enter the owner loop through its channel. A callback racing
 -- quit may enqueue, but cannot apply an update after shutdown.
 covering
-dispatch : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> Channel outMsg -> outMsg -> IO ()
+dispatch : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> Channel (Either (IO ()) outMsg) -> outMsg -> IO ()
 dispatch app modelRef control chan msg = do
   stopped <- readIORef control.quit
   unless stopped $ do
     m <- readIORef modelRef
     let (m', cmd) = app.update msg m
     writeIORef modelRef m'
-    execCmd cmd (channelPut chan) control
+    execCmdScheduled (channelPut chan . Left) cmd (channelPut chan . Right) control
 
 covering
-drainChannel : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> Channel outMsg -> IO ()
+drainChannel : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> Channel (Either (IO ()) outMsg) -> IO ()
 drainChannel app modelRef control chan = do
   stopped <- readIORef control.quit
   unless stopped $ do
     result <- channelGetNonBlocking chan
     case result of
       Nothing => pure ()
-      Just msg => do
+      Just (Left retire) => do
+        retire
+        drainChannel app modelRef control chan
+      Just (Right msg) => do
         dispatch app modelRef control chan msg
         drainChannel app modelRef control chan
 
@@ -83,7 +93,7 @@ isCtrlC s = case unpack s of ['\x03'] => True; _ => False
 -- ─── Main loop ───────────────────────────────────────────────────────────────
 
 covering
-loop : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> IORef Int -> Channel outMsg -> IO ()
+loop : UIApp mdl outMsg -> IORef mdl -> RuntimeControl -> IORef Int -> Channel (Either (IO ()) outMsg) -> IO ()
 loop app modelRef control frameRef chan = do
   -- drain async results first
   drainChannel app modelRef control chan
@@ -110,7 +120,7 @@ loop app modelRef control frameRef chan = do
 
     -- input
     raw <- termRead
-    when (isCtrlC raw) (Common.execCmdManaged QuitApp (channelPut chan) control)
+    when (isCtrlC raw) (Common.execCmdManaged QuitApp (channelPut chan . Right) control)
     quit2 <- readIORef control.quit
     when (not quit2) $ do
       when (raw /= "") $ do
@@ -135,11 +145,11 @@ runTUI app = do
   modelRef <- newIORef initMdl
   quitRef  <- newIORef False
   control  <- newRuntimeControl quitRef
-  chan     <- makeChannel {a = outMsg}
+  chan     <- makeChannel {a = Either (IO ()) outMsg}
   frameRef <- newIORef (the Int 0)
 
   -- startup commands (results arrive on channel)
-  execCmd initCmd (channelPut chan) control
+  execCmdScheduled (channelPut chan . Left) initCmd (channelPut chan . Right) control
 
   -- enter TUI
   rawModeOn

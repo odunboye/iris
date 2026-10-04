@@ -1,5 +1,6 @@
 ||| Iris.State.TEA
-||| The Elm Architecture (TEA) — the primary state-management model for Iris.
+||| Compatibility TEA application and subscriptions. New applications use
+||| Iris.App.UIApp and Iris.Effect.Command.
 |||
 ||| Pure:   Model, View, Update
 ||| Impure: Cmd (outbound effects), Sub (inbound subscriptions)
@@ -9,55 +10,7 @@ module Iris.State.TEA
 -- Supported applications import Iris.App.UIApp and Iris.Widget.
 import Iris.Core.Widget
 
--- ─── Cmd ───────────────────────────────────────────────────────────────────
-
-||| A `Cmd msg` is an *opaque description* of a side-effect that, when
-||| executed by the runtime, eventually produces zero or more `msg` values.
-||| Cmds are *data*, not IO actions — the runtime decides when to run them.
-public export
-data Cmd : (msg : Type) -> Type where
-  ||| Do nothing.
-  None    : Cmd msg
-  ||| Run a batch of commands concurrently.
-  Batch   : List (Cmd msg) -> Cmd msg
-  ||| Map the resulting message through a function.
-  MapCmd  : (a -> b) -> Cmd a -> Cmd b
-  ||| A single raw IO action that produces a message.
-  ||| Smart constructors in Iris.Effect.* wrap this.
-  Task    : IO msg -> Cmd msg
-  ||| A streaming task: calls `send` zero or more times.
-  ||| Use this for LLM token streaming, file tailing, etc.
-  StreamTask : ((msg -> IO ()) -> IO ()) -> Cmd msg
-  ||| Start cooperative asynchronous work and return its cancellation action.
-  ||| Supported runners invoke this on shutdown; DOM/Canvas also do so on
-  ||| lifecycle suspension. Starters must return promptly after arranging work.
-  CancellableTask : ((msg -> IO ()) -> IO (IO ())) -> Cmd msg
-  ||| Tell the runtime to exit cleanly.
-  ||| Use `quit` in your update function instead of returning `none`.
-  QuitApp : Cmd msg
-
-public export
-Functor Cmd where
-  map f None               = None
-  map f (Batch cs)         = Batch (map (map f) cs)
-  map f (MapCmd g c)       = MapCmd (f . g) c
-  map f (Task io)          = Task (map f io)
-  map f (StreamTask act)   = StreamTask (\send => act (send . f))
-  map f (CancellableTask act) = CancellableTask (\send => act (send . f))
-  map _ QuitApp            = QuitApp
-
-public export
-none : Cmd msg
-none = None
-
-public export
-batch : List (Cmd msg) -> Cmd msg
-batch = Batch
-
-||| Command that exits the application cleanly.
-public export
-quit : Cmd msg
-quit = QuitApp
+import public Iris.Effect.Command
 
 -- ─── Sub ───────────────────────────────────────────────────────────────────
 
@@ -98,9 +51,9 @@ public export
 record App (model : Type) (msg : Type) where
   constructor MkApp
   ||| Initial model and any startup commands.
-  init          : (model, Cmd msg)
+  init          : (model, Iris.Effect.Command.Cmd msg)
   ||| Pure state transition.
-  update        : msg -> model -> (model, Cmd msg)
+  update        : msg -> model -> (model, Iris.Effect.Command.Cmd msg)
   ||| Pure view — the entire UI derived from the model.
   view          : model -> Widget msg
   ||| Ongoing subscriptions that depend on the current model.
@@ -110,8 +63,8 @@ record App (model : Type) (msg : Type) where
 
 ||| Legacy Core.Runtime helper. New applications use Iris.App.MkApp.
 public export
-simpleApp : (model, Cmd msg)
-          -> (msg -> model -> (model, Cmd msg))
+simpleApp : (model, Iris.Effect.Command.Cmd msg)
+          -> (msg -> model -> (model, Iris.Effect.Command.Cmd msg))
           -> (model -> Widget msg)
           -> App model msg
 simpleApp i u v = MkApp i u v (const noSub)

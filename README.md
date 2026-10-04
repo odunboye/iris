@@ -53,6 +53,9 @@ Use `Iris.Backend.Terminal.Run.runTUI` or
 The complete [counter example](examples/counter/README.md) supplies terminal,
 DOM and Canvas entry points, package files and browser hosts.
 
+The [account form](examples/form/README.md) demonstrates disabled/read-only
+controls, validation, descriptions and explicit focus across DOM, Canvas and TUI.
+
 ## Features
 
 - Elm-style typed state updates and effects

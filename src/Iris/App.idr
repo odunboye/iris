@@ -6,7 +6,7 @@
 ||| Rendering, input and effect lifecycle behavior differ; see CAPABILITIES.md.
 module Iris.App
 
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Platform.Event
 import Iris.Widget
 

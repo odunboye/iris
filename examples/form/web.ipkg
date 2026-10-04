@@ -1,0 +1,6 @@
+package iris-form-web
+depends = iris
+sourcedir = "."
+modules = Form, MainWeb
+main = MainWeb
+executable = form-web

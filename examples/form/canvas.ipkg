@@ -1,0 +1,6 @@
+package iris-form-canvas
+depends = iris
+sourcedir = "."
+modules = Form, MainCanvas
+main = MainCanvas
+executable = form-canvas

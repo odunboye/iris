@@ -128,3 +128,110 @@ for (const stop of ['button', 'keyboard']) {
     await expect.poll(() => page.evaluate(() => window.__capRemoved)).toBe(3);
   });
 }
+
+// Insert/remove an interactive sibling while the original input is focused.
+test('keyed controls preserve logical focus and selection across insertion', async ({ page }) => {
+  await page.goto('/tests/keyed-dom.html');
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await name.focus();
+  await name.evaluate(el => el.setSelectionRange(1, 3));
+  const originalId = await name.getAttribute('id');
+  await name.evaluate(el => window.__keyedOriginal = el);
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(name).toBeFocused();
+  expect(await name.getAttribute('id')).toBe(originalId);
+  expect(await name.evaluate(el => el === window.__keyedOriginal)).toBe(true);
+  expect(await name.evaluate(el => [el.selectionStart, el.selectionEnd])).toEqual([1, 3]);
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(1);
+  await expect(name).toBeFocused();
+  const toggle = page.getByRole('button', { name: 'Toggle', exact: true });
+  await toggle.focus();
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(toggle).toBeFocused();
+});
+
+test('DOM patching preserves an in-progress composition during sibling updates', async ({ page }) => {
+  await page.goto('/tests/keyed-dom.html');
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await name.focus();
+  await name.evaluate(el => {
+    window.__composingOriginal = el;
+    el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: '' }));
+    el.value = '正在输入';
+  });
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(name).toHaveValue('正在输入');
+  await expect(name).toBeFocused();
+  expect(await name.evaluate(el => el === window.__composingOriginal)).toBe(true);
+  await name.evaluate(el => {
+    el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: el.value }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(1);
+  await expect(name).toHaveValue('正在输入');
+});
+
+for (const host of ['index.html', 'canvas.html']) {
+  test(`form control state, validation and explicit focus work through ${host}`, async ({ page }) => {
+    await page.goto(`/examples/form/${host}`);
+    const name = page.getByRole('textbox', { name: 'Account name', exact: true });
+    const reference = page.getByRole('textbox', { name: 'Reference', exact: true });
+    const locked = page.getByRole('textbox', { name: 'Locked field', exact: true });
+    const save = page.getByRole('button', { name: 'Save', exact: true });
+    await expect(name).toBeFocused();
+    await expect(save).toBeDisabled();
+    await expect(locked).toBeDisabled();
+    await expect(reference).toHaveAttribute('readonly', '');
+    await expect(name).toHaveAccessibleDescription('Use at least three characters.');
+    // Native disabled/read-only semantics also hold against synthetic events.
+    await reference.evaluate(el => {
+      el.value = 'malicious reference';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await locked.evaluate(el => {
+      el.value = 'malicious locked';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.getByRole('checkbox', { name: 'Managed setting', exact: true }).evaluate(el =>
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await expect(name).toHaveValue('');
+    await name.fill('ab');
+    await expect(name).toHaveAttribute('aria-invalid', 'true');
+    const errorId = await name.getAttribute('aria-errormessage');
+    await expect(page.locator(`[id="${errorId}"]`)).toHaveText('Enter at least three characters.');
+    await expect(save).toBeDisabled();
+    await name.fill('Alice Smith');
+    await expect(save).toBeEnabled();
+    await expect(name).not.toHaveAttribute('aria-invalid', 'true');
+    await reference.focus();
+    await reference.press('x');
+    await expect(reference).toBeFocused();
+    // The unchanged focus token must not steal focus after another edit/update.
+    await save.click();
+    await expect(page.getByRole('button', { name: 'Saved: Alice Smith', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Focus name', exact: true }).click();
+    await expect(name).toBeFocused();
+    await reference.focus();
+    await page.keyboard.press('F3');
+    await expect(name).toBeFocused();
+    await page.getByRole('button', { name: 'Lock name', exact: true }).click();
+    await expect(name).toBeDisabled();
+    const focusName = page.getByRole('button', { name: 'Focus name', exact: true });
+    await focusName.click();
+    await expect(focusName).toBeFocused();
+    await page.getByRole('button', { name: 'Unlock name', exact: true }).click();
+    await expect(name).toBeEnabled();
+    await expect(name).toBeFocused();
+    await name.fill('Alice Smith Jr');
+    await name.focus();
+    // Space and arrows remain native text input behavior on the Canvas overlay.
+    await name.press('End');
+    await name.press('Space');
+    await expect(name).toHaveValue('Alice Smith Jr ');
+  });
+}

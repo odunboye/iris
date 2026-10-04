@@ -14,11 +14,11 @@ widget = vstack
 
 messageAt : Nat -> Nat -> Maybe Nat
 messageAt col row =
-  case hitAt col row (layoutTargets widget 40 10) of
+  case map bareTarget $ hitAt col row (layoutTargets widget 40 10) of
     Just (ButtonTarget _ _ _ message) => Just message
     Just (CheckboxTarget _ _ _ message) => Just message
     Just (InputTarget _ _ value handler) => Just (handler value)
-    Nothing => Nothing
+    _ => Nothing
 
 assert : String -> Bool -> IO ()
 assert _ True = pure ()
@@ -38,14 +38,14 @@ main = do
   let scrollSize = measure (scrollView 0 2 widget) 20 6
   assert "scroll viewport uses available bounds" (scrollSize.w == 20 && scrollSize.h == 6)
   assert "scroll offset transforms and clips hit targets"
-    (case hitAt 1 0 (layoutTargets (scrollView 0 1 widget) 20 2) of
+    (case map bareTarget $ hitAt 1 0 (layoutTargets (scrollView 0 1 widget) 20 2) of
        Just (CheckboxTarget _ _ _ 20) => True
        _ => False)
   let enlarged = minimumHitTargets 5 2 (layoutTargets (button "tap" 7) 40 10)
-  assert "minimum touch width" (case hitAt 4 0 enlarged of
+  assert "minimum touch width" (case map bareTarget $ hitAt 4 0 enlarged of
                                   Just (ButtonTarget _ _ _ 7) => True
                                   _ => False)
-  assert "minimum touch height" (case hitAt 0 1 enlarged of
+  assert "minimum touch height" (case map bareTarget $ hitAt 0 1 enlarged of
                                    Just (ButtonTarget _ _ _ 7) => True
                                    _ => False)
   let semantics = semanticOverlay 10.0 20.0 (layoutTargets widget 40 10)
@@ -63,6 +63,12 @@ main = do
   assert "independent first pointer capture" (first == Just 10)
   assert "independent second pointer capture" (second == Just 20)
   assert "captures released" (afterSecond == [])
+  let disabled : Widget Nat = WButton (sDisabled True defaultStyle) "Locked" 99
+  assert "disabled Canvas controls reject pointer hits" (case hitAt 0 0 (layoutTargets disabled 20 5) of Nothing => True; _ => False)
+  let detailed : Widget Nat = WInput (sSecret (sReadOnly True (sAccessibleName "Password" (sInvalid "Invalid" (sDescription "Hint" (sKey "password" defaultStyle)))))) "secret" (const 1)
+  let detailHTML = semanticOverlay 10 20 (layoutTargets detailed 40 5)
+  assert "Canvas preserves password and read-only semantics" (contains "type='password'" detailHTML && contains " readonly" detailHTML)
+  assert "Canvas carries accessible name and validation" (contains "aria-label='Password'" detailHTML && contains "aria-invalid='true'" detailHTML && contains "aria-describedby='" detailHTML)
   putStrLn "Canvas layout tests passed"
   where
     startsWith : List Char -> List Char -> Bool

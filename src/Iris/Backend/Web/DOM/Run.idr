@@ -34,31 +34,13 @@
 ||| • A `setTimeout(33ms)` chain drives the render loop (~30 fps).
 ||| • A `setTimeout(100ms)` chain drives the animation tick.
 |||
-||| Every render tick replaces `#iris-app`'s entire `innerHTML` - there
-||| is no virtual-DOM diff/patch here, the whole tree is re-stringified
-||| and swapped in wholesale every ~33ms regardless of whether anything
-||| actually changed. That's fine for everything EXCEPT real browser
-||| focus: an `innerHTML` replace destroys and recreates every
-||| descendant node, including whichever `<input>` currently has focus
-||| (and the user's cursor position/selection in it) - confirmed
-||| directly, not assumed: before `setHTML` below saved/restored it,
-||| typing a single character into a `WInput` field lost focus on that
-||| same tick, making a second keystroke impossible without re-clicking
-||| the field. `setHTML`'s JS body saves `document.activeElement`'s id
-||| and selection range beforehand (only if it's one of ours - an
-||| `INPUT` inside `#iris-app` with an id) and restores both onto the
-||| newly-recreated element with the same id afterward. This works
-||| because `Iris.Backend.Web.DOM.Render`'s `WInput` case gives its
-||| `<input>` a stable id (`iris-input-<n>`, `n` from the shared
-||| per-render counter) - stable ACROSS renders only as long as the
-||| widget's position in the tree doesn't change relative to other
-||| interactive widgets, same caveat every id in this module already has
-||| (`idMap`/`inputMap` are both rebuilt fresh every render, not
-||| diffed).
+||| The loop renders every ~33ms, patching the DOM only when HTML changes.
+||| Focus and selection are restored by control ID. Use sKey for controls in
+||| dynamic trees; positional IDs are only stable in fixed interactive trees.
 module Iris.Backend.Web.DOM.Run
 
 import Data.IORef
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Platform.Event
 import Iris.App
 import Iris.Widget
@@ -73,11 +55,10 @@ import Iris.App.EventWire
 %foreign "javascript:lambda: (css, _w) => { if(!globalThis.__irisStyleSheet){const sheet=new CSSStyleSheet();sheet.replaceSync(css);document.adoptedStyleSheets=[...document.adoptedStyleSheets,sheet];globalThis.__irisStyleSheet=sheet;globalThis.__irisStyleRules=new Map();globalThis.__irisApplyStyles=(root)=>{root.querySelectorAll('[data-iris-style]').forEach(el=>{const value=el.dataset.irisStyle;let cls=globalThis.__irisStyleRules.get(value);if(!cls){cls='iris-dyn-'+globalThis.__irisStyleRules.size;sheet.insertRule('.'+cls+'{'+value+'}',sheet.cssRules.length);globalThis.__irisStyleRules.set(value,cls);}el.classList.add(cls);el.removeAttribute('data-iris-style');});};} }"
 prim_injectCSS : String -> PrimIO ()
 
--- Set the innerHTML of #iris-app, preserving real browser focus and
--- text selection across the replace - see this module's doc comment
--- for why that's necessary, not optional, once any `WInput` is a real
--- (non-readonly) field.
-%foreign "javascript:lambda: (html, _w) => { const el=document.getElementById('iris-app'); if(!el) return; let focusedId=null, selStart=0, selEnd=0; const active=document.activeElement; if(active && el.contains(active) && active.tagName==='INPUT' && active.id){ focusedId=active.id; try{ selStart=active.selectionStart||0; selEnd=active.selectionEnd||0;}catch(e){} } el.innerHTML=html; if(globalThis.__irisApplyStyles)globalThis.__irisApplyStyles(el); if(focusedId){const ne=document.getElementById(focusedId);if(ne){ne.focus();try{ne.setSelectionRange(selStart,selEnd);}catch(e){}}} }"
+-- Patch compatible nodes in place. Keyed controls can move among siblings;
+-- their native state survives updates. Input values are left alone during
+-- composition; focus and selection are restored if a move disturbed them.
+%foreign "javascript:lambda: (html, _w) => { const root=document.getElementById('iris-app');if(!root)return; const active=document.activeElement;const id=active&&root.contains(active)?active.id:null; let start,end;try{start=active.selectionStart;end=active.selectionEnd;}catch(e){} const template=document.createElement('template');template.innerHTML=html; const compatible=(a,b)=>a.nodeType===b.nodeType&&(a.nodeType!==1||(a.tagName===b.tagName&&a.id===b.id)); const patch=(old,next)=>{ if(old.nodeType!==1){if(old.nodeValue!==next.nodeValue)old.nodeValue=next.nodeValue;return;} for(const attr of Array.from(old.attributes))if(!next.hasAttribute(attr.name))old.removeAttribute(attr.name); for(const attr of Array.from(next.attributes))if(old.getAttribute(attr.name)!==attr.value)old.setAttribute(attr.name,attr.value); if(old.tagName==='INPUT'){ if(old.value!==next.value&&!old.__irisComposing)old.value=next.value; old.checked=next.checked; } children(old,next); }; const children=(old,next)=>{ let cursor=old.firstChild; for(const desired of Array.from(next.childNodes)){ let found=desired.nodeType===1&&desired.id?Array.from(old.childNodes).find(n=>n.nodeType===1&&n.id===desired.id&&compatible(n,desired)):cursor&&compatible(cursor,desired)?cursor:null; if(found){if(found!==cursor)old.insertBefore(found,cursor);patch(found,desired);cursor=found.nextSibling;} else{old.insertBefore(desired.cloneNode(true),cursor);} } while(cursor){const nextNode=cursor.nextSibling;cursor.remove();cursor=nextNode;} }; children(root,template.content); if(globalThis.__irisApplyStyles)globalThis.__irisApplyStyles(root); if(id){const next=Array.from(root.querySelectorAll('[id]')).find(n=>n.id===id);if(next){if(document.activeElement!==next)next.focus();if(start!=null&&!next.__irisComposing)try{next.setSelectionRange(start,end);}catch(e){}}} }"
 prim_setHTML : String -> PrimIO ()
 
 -- Set up ONE ordered event queue, then attach the keyboard listener.
@@ -100,7 +81,7 @@ prim_setHTML : String -> PrimIO ()
 -- `<input>` in focus gets its normal native text-editing behavior;
 -- nothing focused (the traditional TUI-nav-on-a-page case) keeps the
 -- old scroll-prevention behavior.
-%foreign "javascript:lambda: _w => { if(window.__irisQueuesReady) return; window.__irisQueuesReady=true; const q=window.__irisEvents=window.__irisEvents||[]; const controller=new AbortController();window.__irisAbort=controller;const on=(target,name,fn,opts={})=>target.addEventListener(name,fn,{...opts,signal:controller.signal}); const enc=s=>Array.from(String(s)).map(c=>c.codePointAt(0)).join('.'); const b=v=>v?'1':'0'; const mods=e=>[b(e.shiftKey),b(e.ctrlKey),b(e.altKey),b(e.metaKey)].join('|'); const push=s=>{if(!controller.signal.aborted)q.push(s);}; const key=(a,e)=>push('f1|K|'+a+'|'+enc(e.key)+'|'+enc(e.code||e.key)+'|'+mods(e)+'|'+(Array.from(e.key).length===1?e.key.codePointAt(0):'none')); on(document,'keydown',e=>{ const inField=document.activeElement&&document.activeElement.tagName==='INPUT'; if(!inField&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault(); key(e.repeat?'repeat':'down',e); }); on(document,'keyup',e=>key('up',e)); const pa={pointerdown:'down',pointerup:'up',pointermove:'move',pointerenter:'enter',pointerleave:'leave',pointercancel:'cancel'}; const pb=n=>n===0?'primary':n===1?'middle':n===2?'secondary':n===3?'back':n===4?'forward':'none'; Object.keys(pa).forEach(name=>on(document,name,e=>push('f1|P|'+pa[name]+'|'+(['mouse','touch','pen'].includes(e.pointerType)?e.pointerType:'mouse')+'|'+Math.max(0,e.pointerId||0)+'|'+e.clientX+'|'+e.clientY+'|'+(e.movementX||0)+'|'+(e.movementY||0)+'|'+pb(e.button)+'|'+Math.max(0,Math.min(1,e.pressure||0))+'|'+mods(e)),{passive:true})); on(document,'wheel',e=>push('f1|S|'+e.clientX+'|'+e.clientY+'|'+e.deltaX+'|'+e.deltaY+'|'+e.deltaZ),{passive:true}); on(window,'resize',()=>push('f1|R|'+innerWidth+'|'+innerHeight)); on(window,'focus',()=>push('f1|F|gain')); on(window,'blur',()=>push('f1|F|lost')); on(window,'orientationchange',()=>push('f1|O|'+(innerHeight>=innerWidth?'portrait':'landscape'))); on(document,'visibilitychange',()=>push('f1|L|'+(document.hidden?'hidden':'visible'))); on(window,'pagehide',()=>push('f1|L|pause')); on(window,'pageshow',()=>push('f1|L|resume')); on(window,'popstate',()=>{push('f1|L|back');push('f1|L|location|'+enc(location.pathname+location.search+location.hash));}); on(document,'compositionstart',e=>push('f1|M|start|'+enc(e.data||''))); on(document,'compositionupdate',e=>push('f1|M|update|'+enc(e.data||''))); on(document,'compositionend',e=>push('f1|M|end|'+enc(e.data||''))); on(document,'click',e=>{const target=e.target&&e.target.closest('[data-iris-click]');if(target&&document.getElementById('iris-app')?.contains(target))push('C'+target.dataset.irisClick);}); on(document,'input',e=>{const target=e.target&&e.target.closest('[data-iris-input]');if(target&&document.getElementById('iris-app')?.contains(target))push('I'+target.dataset.irisInput+'\x01'+target.value);}); push('f1|L|location|'+enc(location.pathname+location.search+location.hash)); if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App){ [['backButton','back'],['pause','pause'],['resume','resume']].forEach(([name,event])=>{Promise.resolve(window.Capacitor.Plugins.App.addListener(name,()=>push('f1|L|'+event))).then(handle=>{if(controller.signal.aborted)handle.remove();else controller.signal.addEventListener('abort',()=>handle.remove(),{once:true});});}); } }"
+%foreign "javascript:lambda: _w => { if(window.__irisQueuesReady) return; window.__irisQueuesReady=true; const q=window.__irisEvents=window.__irisEvents||[]; const controller=new AbortController();window.__irisAbort=controller;const on=(target,name,fn,opts={})=>target.addEventListener(name,fn,{...opts,signal:controller.signal}); const enc=s=>Array.from(String(s)).map(c=>c.codePointAt(0)).join('.'); const b=v=>v?'1':'0'; const mods=e=>[b(e.shiftKey),b(e.ctrlKey),b(e.altKey),b(e.metaKey)].join('|'); const push=s=>{if(!controller.signal.aborted)q.push(s);}; const key=(a,e)=>push('f1|K|'+a+'|'+enc(e.key)+'|'+enc(e.code||e.key)+'|'+mods(e)+'|'+(Array.from(e.key).length===1?e.key.codePointAt(0):'none')); on(document,'keydown',e=>{ const inField=document.activeElement&&document.activeElement.tagName==='INPUT'; if(!inField&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault(); key(e.repeat?'repeat':'down',e); }); on(document,'keyup',e=>key('up',e)); const pa={pointerdown:'down',pointerup:'up',pointermove:'move',pointerenter:'enter',pointerleave:'leave',pointercancel:'cancel'}; const pb=n=>n===0?'primary':n===1?'middle':n===2?'secondary':n===3?'back':n===4?'forward':'none'; Object.keys(pa).forEach(name=>on(document,name,e=>push('f1|P|'+pa[name]+'|'+(['mouse','touch','pen'].includes(e.pointerType)?e.pointerType:'mouse')+'|'+Math.max(0,e.pointerId||0)+'|'+e.clientX+'|'+e.clientY+'|'+(e.movementX||0)+'|'+(e.movementY||0)+'|'+pb(e.button)+'|'+Math.max(0,Math.min(1,e.pressure||0))+'|'+mods(e)),{passive:true})); on(document,'wheel',e=>push('f1|S|'+e.clientX+'|'+e.clientY+'|'+e.deltaX+'|'+e.deltaY+'|'+e.deltaZ),{passive:true}); on(window,'resize',()=>push('f1|R|'+innerWidth+'|'+innerHeight)); on(window,'focus',()=>push('f1|F|gain')); on(window,'blur',()=>push('f1|F|lost')); on(window,'orientationchange',()=>push('f1|O|'+(innerHeight>=innerWidth?'portrait':'landscape'))); on(document,'visibilitychange',()=>push('f1|L|'+(document.hidden?'hidden':'visible'))); on(window,'pagehide',()=>push('f1|L|pause')); on(window,'pageshow',()=>push('f1|L|resume')); on(window,'popstate',()=>{push('f1|L|back');push('f1|L|location|'+enc(location.pathname+location.search+location.hash));}); on(document,'compositionstart',e=>{e.target.__irisComposing=true;push('f1|M|start|'+enc(e.data||''));}); on(document,'compositionupdate',e=>push('f1|M|update|'+enc(e.data||''))); on(document,'compositionend',e=>{e.target.__irisComposing=false;push('f1|M|end|'+enc(e.data||''));}); on(document,'click',e=>{const target=e.target&&e.target.closest('[data-iris-click]');if(target&&document.getElementById('iris-app')?.contains(target))push('C'+target.dataset.irisClick);}); on(document,'input',e=>{const target=e.target&&e.target.closest('[data-iris-input]');if(target&&document.getElementById('iris-app')?.contains(target))push('I'+target.dataset.irisInput+'\x01'+target.value);}); push('f1|L|location|'+enc(location.pathname+location.search+location.hash)); if(window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App){ [['backButton','back'],['pause','pause'],['resume','resume']].forEach(([name,event])=>{Promise.resolve(window.Capacitor.Plugins.App.addListener(name,()=>push('f1|L|'+event))).then(handle=>{if(controller.signal.aborted)handle.remove();else controller.signal.addEventListener('abort',()=>handle.remove(),{once:true});});}); } }"
 prim_setupQueues : PrimIO ()
 
 %foreign "javascript:lambda: _w => { if(window.__irisAbort)window.__irisAbort.abort();window.__irisAbort=null;window.__irisQueuesReady=false;window.__irisEvents=[]; }"
@@ -120,7 +101,9 @@ injectCSS : String -> IO ()
 injectCSS css = primIO (prim_injectCSS css)
 
 setHTML : String -> IO ()
-setHTML html = primIO (prim_setHTML html)
+setHTML html = do
+  primIO (prim_setHTML html)
+  focusControls "#iris-app"
 
 setupQueues : IO ()
 setupQueues = primIO prim_setupQueues

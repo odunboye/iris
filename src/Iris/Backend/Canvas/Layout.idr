@@ -2,6 +2,7 @@
 module Iris.Backend.Canvas.Layout
 
 import Iris.Widget
+import Iris.Backend.Web.Control
 import Iris.Backend.Terminal.WidgetRender
 
 public export
@@ -9,12 +10,14 @@ data HitTarget msg
   = ButtonTarget Nat WRect String msg
   | CheckboxTarget Nat WRect Bool msg
   | InputTarget Nat WRect String (String -> msg)
+  | StyledTarget Style (HitTarget msg)
 
 public export
 targetId : HitTarget msg -> Nat
 targetId (ButtonTarget value _ _ _) = value
 targetId (CheckboxTarget value _ _ _) = value
 targetId (InputTarget value _ _ _) = value
+targetId (StyledTarget _ target) = targetId target
 
 public export
 PointerCaptures : Type
@@ -43,6 +46,17 @@ targetRect : HitTarget msg -> WRect
 targetRect (ButtonTarget _ rect _ _) = rect
 targetRect (CheckboxTarget _ rect _ _) = rect
 targetRect (InputTarget _ rect _ _) = rect
+targetRect (StyledTarget _ target) = targetRect target
+
+public export
+targetStyle : HitTarget msg -> Style
+targetStyle (StyledTarget style _) = style
+targetStyle _ = defaultStyle
+
+public export
+bareTarget : HitTarget msg -> HitTarget msg
+bareTarget (StyledTarget _ target) = bareTarget target
+bareTarget target = target
 
 shiftRectInto : WRect -> Nat -> Nat -> WRect -> Maybe WRect
 shiftRectInto viewport scrollX scrollY rect =
@@ -58,6 +72,8 @@ shiftRectInto viewport scrollX scrollY rect =
      else Just (MkWRect shiftedCol shiftedRow visibleW visibleH)
 
 shiftTargetInto : WRect -> Nat -> Nat -> HitTarget msg -> Maybe (HitTarget msg)
+shiftTargetInto viewport x y (StyledTarget style target) =
+  map (StyledTarget style) (shiftTargetInto viewport x y target)
 shiftTargetInto viewport x y (ButtonTarget id rect label message) =
   map (\visible => ButtonTarget id visible label message) (shiftRectInto viewport x y rect)
 shiftTargetInto viewport x y (CheckboxTarget id rect checked message) =
@@ -83,16 +99,16 @@ hitAt col row targets = findHit (reverse targets)
     findHit : List (HitTarget msg) -> Maybe (HitTarget msg)
     findHit [] = Nothing
     findHit (target :: rest) =
-      if inside col row (targetRect target) then Just target else findHit rest
+      if not (targetStyle target).control.disabled && inside col row (targetRect target) then Just target else findHit rest
 
 mutual
   collect : Nat -> Widget msg -> WRect -> (Nat, List (HitTarget msg))
-  collect next (WButton _ label message) rect =
-    (S next, [ButtonTarget next rect label message])
-  collect next (WCheckbox _ checked message) rect =
-    (S next, [CheckboxTarget next rect checked message])
-  collect next (WInput _ value handler) rect =
-    (S next, [InputTarget next rect value handler])
+  collect next (WButton style label message) rect =
+    (S next, [StyledTarget style (ButtonTarget next rect label message)])
+  collect next (WCheckbox style checked message) rect =
+    (S next, [StyledTarget style (CheckboxTarget next rect checked message)])
+  collect next (WInput style value handler) rect =
+    (S next, [StyledTarget style (InputTarget next rect value handler)])
   collect next (WVStack style children) rect =
     let inner = innerRect style rect
         sizes = distributeV children inner.w inner.h
@@ -151,23 +167,13 @@ minimumHitTargets : Nat -> Nat -> List (HitTarget msg) -> List (HitTarget msg)
 minimumHitTargets minimumW minimumH = map expand
   where
     expand : HitTarget msg -> HitTarget msg
+    expand (StyledTarget style target) = StyledTarget style (expand target)
     expand (ButtonTarget id rect label message) =
       ButtonTarget id (expandRect minimumW minimumH rect) label message
     expand (CheckboxTarget id rect checked message) =
       CheckboxTarget id (expandRect minimumW minimumH rect) checked message
     expand (InputTarget id rect value handler) =
       InputTarget id (expandRect minimumW minimumH rect) value handler
-
-escapeAttribute : String -> String
-escapeAttribute value = concatMap escape (unpack value)
-  where
-    escape : Char -> String
-    escape '&' = "&amp;"
-    escape '<' = "&lt;"
-    escape '>' = "&gt;"
-    escape '"' = "&quot;"
-    escape '\'' = "&#39;"
-    escape char = pack [char]
 
 semanticStyle : Double -> Double -> WRect -> String
 semanticStyle cellW cellH rect =
@@ -180,19 +186,27 @@ semanticStyle cellW cellH rect =
 ||| while Canvas remains responsible for visual rendering.
 public export
 semanticOverlay : Double -> Double -> List (HitTarget msg) -> String
-semanticOverlay cellW cellH = concatMap renderTarget
+semanticOverlay cellW cellH = concatMap (\target => renderTarget (targetStyle target) (bareTarget target))
   where
-    renderTarget : HitTarget msg -> String
-    renderTarget (ButtonTarget id rect label _) =
-      "<button class='iris-canvas-control' aria-label='" ++ escapeAttribute label ++
-      "' data-iris-style='" ++ semanticStyle cellW cellH rect ++ "' " ++
-      "data-iris-canvas-activate='" ++ show id ++ "'></button>"
-    renderTarget (CheckboxTarget id rect checked _) =
-      "<input class='iris-canvas-control' type='checkbox' aria-label='Toggle' " ++
+    renderTarget : Style -> HitTarget msg -> String
+    renderTarget style (ButtonTarget id rect label _) =
+      let identity = controlId "canvas-button" style id in
+      "<button id='" ++ identity ++ "' class='iris-canvas-control' aria-label='" ++
+      escapeControl (controlName style label) ++ "'" ++ controlAttributes style identity ++
+      " data-iris-style='" ++ semanticStyle cellW cellH rect ++ "' " ++
+      "data-iris-canvas-activate='" ++ show id ++ "'></button>" ++ controlDetails style identity
+    renderTarget style (CheckboxTarget id rect checked _) =
+      let identity = controlId "canvas-checkbox" style id in
+      "<input id='" ++ identity ++ "' class='iris-canvas-control' type='checkbox' aria-label='" ++
+      escapeControl (controlName style "Toggle") ++ "'" ++ controlAttributes style identity ++ " " ++
       (if checked then "checked " else "") ++ "data-iris-style='" ++ semanticStyle cellW cellH rect ++
-      "' data-iris-canvas-activate='" ++ show id ++ "'/>"
-    renderTarget (InputTarget id rect value _) =
-      "<input class='iris-canvas-control iris-canvas-input' type='text' " ++
-      "aria-label='Canvas text input' autocomplete='off' id='iris-canvas-input-" ++
-      show id ++ "' data-iris-style='" ++ semanticStyle cellW cellH rect ++ "' value='" ++
-      escapeAttribute value ++ "' data-iris-canvas-input='" ++ show id ++ "'/>"
+      "' data-iris-canvas-activate='" ++ show id ++ "'/>" ++ controlDetails style identity
+    renderTarget style (InputTarget id rect value _) =
+      let identity = controlId "canvas-input" style id in
+      "<input class='iris-canvas-control iris-canvas-input' type='" ++
+      (if style.secret then "password" else "text") ++ "' aria-label='" ++
+      escapeControl (controlName style "Canvas text input") ++ "'" ++ controlAttributes style identity ++
+      (if style.control.readOnly then " readonly" else "") ++ " autocomplete='off' id='" ++
+      identity ++ "' data-iris-style='" ++ semanticStyle cellW cellH rect ++ "' value='" ++
+      escapeControl value ++ "' data-iris-canvas-input='" ++ show id ++ "'/>" ++ controlDetails style identity
+    renderTarget style (StyledTarget nested target) = renderTarget nested target

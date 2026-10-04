@@ -10,6 +10,8 @@
 ||| 4. Layout is declarative (fill/fixed/hug); backends compute positions.
 module Iris.Widget
 
+import Data.Maybe
+
 -- ─── Colour ──────────────────────────────────────────────────────────────────
 
 ||| Platform-agnostic colour.
@@ -27,6 +29,21 @@ data UIColor
 
 public export
 data BorderKind = NoBorder | ThinBorder | ThickBorder | RoundedBorder
+
+||| Behavior and accessibility metadata for an interactive control.
+public export
+record ControlOptions where
+  constructor MkControlOptions
+  disabled : Bool
+  readOnly : Bool
+  accessibleName : Maybe String
+  description : Maybe String
+  validationError : Maybe String
+  focusRequest : Maybe Nat
+
+public export
+defaultControl : ControlOptions
+defaultControl = MkControlOptions False False Nothing Nothing Nothing Nothing
 
 -- ─── Style ───────────────────────────────────────────────────────────────────
 
@@ -48,12 +65,48 @@ record Style where
   fillH     : Bool             -- stretch to fill available width
   fillV     : Bool             -- stretch to fill available height
   label     : Maybe String     -- box/panel title
+  key       : Maybe String    -- application-owned DOM identity; unique per page
+  control   : ControlOptions
   secret    : Bool             -- mask input rendering; never changes edit values
 
 public export
 defaultStyle : Style
 defaultStyle = MkStyle Nothing Nothing False False False
-               NoBorder 0 0 Nothing Nothing False False Nothing False
+               NoBorder 0 0 Nothing Nothing False False Nothing Nothing defaultControl False
+
+||| Prefer a distinct accessible name; retain sTitle as a compatibility fallback.
+public export
+controlName : Style -> String -> String
+controlName style fallback = case style.control.accessibleName of
+  Just name => name
+  Nothing => fromMaybe fallback style.label
+
+public export
+sDisabled : Bool -> Style -> Style
+sDisabled value style = { control.disabled := value } style
+
+||| Prevent native text editing. For buttons and checkboxes use sDisabled.
+public export
+sReadOnly : Bool -> Style -> Style
+sReadOnly value style = { control.readOnly := value } style
+
+public export
+sAccessibleName : String -> Style -> Style
+sAccessibleName value style = { control.accessibleName := Just value } style
+
+public export
+sDescription : String -> Style -> Style
+sDescription value style = { control.description := Just value } style
+
+public export
+sInvalid : String -> Style -> Style
+sInvalid value style = { control.validationError := Just value } style
+
+||| Request browser focus once per token for a keyed control. Increment the
+||| token for a new request. Disabled controls defer the request until enabled.
+public export
+sFocus : Nat -> Style -> Style
+sFocus token style = { control.focusRequest := Just token } style
 
 -- ─── Style helpers ───────────────────────────────────────────────────────────
 
@@ -74,6 +127,12 @@ public export sPadH    : Nat        -> Style -> Style ; sPadH    n s = { padH   
 public export sPadV    : Nat        -> Style -> Style ; sPadV    n s = { padV    := n    } s
 public export sPad     : Nat        -> Style -> Style
 sPad n s = { padH := n, padV := n } s
+
+||| Stable identity for an interactive DOM control. Keys must be unique across
+||| the page and stay attached to the same logical control across updates.
+public export
+sKey : String -> Style -> Style
+sKey key s = { key := Just key } s
 
 public export
 sSecret : Style -> Style

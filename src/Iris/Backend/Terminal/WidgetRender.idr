@@ -91,7 +91,8 @@ styleAttrs s =
       bldS = if s.bold      then "\x1b[1m" else ""
       itlS = if s.italic    then "\x1b[3m" else ""
       ulS  = if s.underline then "\x1b[4m" else ""
-  in resetAttrs ++ fgS ++ bgS ++ bldS ++ itlS ++ ulS
+  in resetAttrs ++ fgS ++ bgS ++ bldS ++ itlS ++ ulS ++
+     (if s.control.disabled then "\x1b[2m" else "")
 
 -- ─── Border helpers ──────────────────────────────────────────────────────────
 

@@ -1,0 +1,6 @@
+package iris-keyed-dom
+depends = iris
+sourcedir = "."
+modules = KeyedDOM
+main = KeyedDOM
+executable = keyed-dom
