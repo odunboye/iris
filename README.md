@@ -58,6 +58,9 @@ The [RPC client example](examples/client/README.md) demonstrates
 The [native commands example](examples/mobile-commands/README.md)
 demonstrates every `Iris.Mobile` command against a mock native bridge.
 
+The [hot reload example](examples/hot-reload/README.md) demonstrates
+`runWebHot` surviving a real swap between two separately compiled programs.
+
 ## Features
 
 - Elm-style typed state updates and effects

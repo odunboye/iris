@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Iris hot reload</title></head><body>
+<div id="controls" style="font-family:sans-serif;margin-bottom:1em">
+  <p>This simulates what Flux's <code>dev --hot</code> does on a real file
+  change: snapshot the running model, tear down, load newly compiled code,
+  restore. Click "Run v1" first, increment a few times, then click "Run v2"
+  - Count and Ticks survive the swap even though v2 is a separately compiled
+  program with a different increment step.</p>
+  <button id="load-v1" type="button">Run v1 (Increment adds 1)</button>
+  <button id="load-v2" type="button">Run v2 (Increment adds 10)</button>
+  <p id="swap-status">Nothing loaded yet - click a button above.</p>
+</div>
+<main id="iris-app"></main>
+<script>
+// A minimal stand-in for the globalThis.__fluxHot client a real dev server
+// injects (see docs/concepts/architecture.md's HMR link and
+// src/Iris/Backend/Web/DOM/Run.idr's runWebHot/startWeb). This repo doesn't
+// ship that dev server - it lives in the separate Flux project - so this
+// demo reimplements just enough of its contract to drive a real swap.
+// The one piece that's actual protocol, not this demo's own invention: a
+// snapshot string of "0" or "" means don't restore, "1"+payload means strip
+// the "1" and hand the rest to the next generation's prepare.
+let current = null;       // {snapshot, dispose} registered by the active generation
+let pendingPayload = null;
+let isLoading = false;
+let activeLabel = null;
+
+globalThis.__fluxHot = {
+  loading() { return isLoading; },
+  attach({ snapshot, dispose }) { current = { snapshot, dispose }; },
+  offer({ prepare, start }) {
+    isLoading = false;
+    if (pendingPayload !== null) prepare(pendingPayload);
+    pendingPayload = null;
+    start();
+  },
+};
+
+// Each compiled bundle is a self-contained Idris JS program with its own
+// top-level `const`/`function` declarations (the Idris2 JS backend does not
+// namespace or module-wrap them). A second plain `<script src>` for a
+// different bundle collides with the first one's still-live global
+// declarations ("Identifier ... has already been declared"). Fetching and
+// running each bundle's text inside its own `Function` keeps those
+// declarations scoped to that call instead of leaking into the shared
+// global scope - only things a bundle explicitly assigns onto `globalThis`
+// (like this page's own __fluxHot) cross that boundary, which is exactly
+// what the hot-swap handoff needs.
+async function swapTo(label, src) {
+  if (activeLabel === label) return;
+  if (current) {
+    const raw = current.snapshot();
+    current.dispose();
+    current = null;
+    pendingPayload = (raw.length > 0 && raw[0] === '1') ? raw.slice(1) : null;
+  }
+  isLoading = true;
+  activeLabel = label;
+  document.getElementById('swap-status').textContent = 'Loading ' + label + '...';
+  const code = await fetch(src).then(r => r.text());
+  new Function(code)();
+  document.getElementById('swap-status').textContent = 'Running ' + label + '.';
+}
+
+document.getElementById('load-v1').addEventListener('click', () => swapTo('v1', 'build/exec/hot-v1-web'));
+document.getElementById('load-v2').addEventListener('click', () => swapTo('v2', 'build/exec/hot-v2-web'));
+</script>
+</body></html>

@@ -44,6 +44,8 @@ parameters, navigation guards and browser history.
 JSON-RPC-over-HTTP calls, error decoding and bearer auth against a real
 local server. [Native commands](../examples/mobile-commands/README.md)
 demonstrates every `Iris.Mobile` command against a mock native bridge.
+[Hot reload](../examples/hot-reload/README.md) demonstrates `runWebHot`
+surviving a real swap between two separately compiled programs.
 
 ## Maintain these docs
 

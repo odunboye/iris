@@ -1,0 +1,6 @@
+package iris-hot-reload-v2
+depends = iris
+sourcedir = "."
+modules = Counter, MainV2
+main = MainV2
+executable = hot-v2-web
