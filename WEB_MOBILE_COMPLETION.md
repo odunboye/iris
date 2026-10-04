@@ -6,11 +6,11 @@ requires a machine with native SDKs.
 
 ## Portable validation
 
-Run from the Flux repository root:
+Run from this repo's root:
 
 ```sh
-(cd packages/ui && npm ci && npx playwright install chromium)
-bash tools/ci-suite.sh ui
+npm ci && npx playwright install chromium
+make check
 ```
 
 This command builds Iris, runs the public API/EventWire/runtime/layout/router/DOM/HTTP tests,
@@ -26,7 +26,7 @@ and runs real-browser integration tests. The root Linux CI job provisions the
 same suite. To rerun only the browser tests after building:
 
 ```sh
-make -C packages/ui browser-test
+make browser-test
 ```
 
 ## Implemented behavior
@@ -54,7 +54,7 @@ Native validation is intentionally not part of portable CI. On a machine with
 Xcode or the Android SDK installed, after the portable bundle build above:
 
 ```sh
-cd packages/ui/examples/todo/mobile
+cd examples/todo/mobile
 npm ci
 # First-time setup: npx cap add ios / npx cap add android
 npx cap sync ios       # macOS + Xcode

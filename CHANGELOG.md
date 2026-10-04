@@ -36,7 +36,7 @@ Versioning within the normal compatibility limits of a pre-1.0 release.
   listeners and retires timer/style resources. Restores do not replay init Cmds.
 - Flux `dev --hot` (implies watch) and Chequra's in-memory state codec exercise
   the protocol. Normal `runWeb` and other backends remain unchanged.
-- See [the HMR guide](../../design/DEV_HMR.md) for opt-in requirements and tests.
+- See [the HMR guide](https://github.com/odunboye/flux/blob/main/design/DEV_HMR.md) for opt-in requirements and tests.
 
 ## Unreleased — private application inputs
 

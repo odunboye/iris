@@ -5,15 +5,15 @@ module changes between terminal, DOM and Canvas. No credentials or database are
 needed. Controls use each runner's input behavior; this example does not assert
 identical layout or lifecycle guarantees.
 
-From the Flux repository root:
+From this repo's root:
 
 ```sh
 pack --no-prompt install iris
-pack --no-prompt build packages/ui/examples/counter/terminal.ipkg
-./packages/ui/examples/counter/build/exec/counter-terminal
-pack --no-prompt --cg javascript build packages/ui/examples/counter/web.ipkg
-pack --no-prompt --cg javascript build packages/ui/examples/counter/canvas.ipkg
-python3 -m http.server 8080 --directory packages/ui/examples/counter
+pack --no-prompt build examples/counter/terminal.ipkg
+./examples/counter/build/exec/counter-terminal
+pack --no-prompt --cg javascript build examples/counter/web.ipkg
+pack --no-prompt --cg javascript build examples/counter/canvas.ipkg
+python3 -m http.server 8080 --directory examples/counter
 ```
 
 Open http://127.0.0.1:8080/index.html for DOM or

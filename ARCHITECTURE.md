@@ -31,7 +31,8 @@ record are compatibility APIs, not the subscription contract of `UIApp`.
   `WidgetRender` and the ANSI/FFI terminal layer.
 - DOM: `Backend.Web.DOM.Run` uses semantic HTML rendering, browser event queues
   and managed effect lifecycle handling. `runWebHot` adds opt-in versioned model
-  reconstruction; see [HMR](../../design/DEV_HMR.md).
+  reconstruction; see [HMR](https://github.com/odunboye/flux/blob/main/design/DEV_HMR.md)
+  (Flux's dev server implements the swap protocol around this API).
 - Canvas: `Backend.Canvas.Run` uses cell-based layout, painting and transformed
   hit targets. A semantic DOM overlay supplies native controls and text entry.
   `runMobile` is this Canvas path with mobile metrics, hosted in a WebView.
@@ -57,7 +58,7 @@ establish blanket layout validity, absence of leaks, or freedom from runtime
 failure. For example, `IRGB Nat Nat Nat` documents 0–255 channels without encoding
 that bound; layout dimensions and offsets require application judgment.
 
-Run `bash tools/ci-suite.sh ui` from the Flux root with the documented
+Run `make check` from this repo's root with the documented
 prerequisites to exercise the supported suite. Future GPU/resource proofs,
 desktop/embedded backends and wider architectural proposals live in
 [FUTURE_DESIGN.md](FUTURE_DESIGN.md); they are not release commitments.
