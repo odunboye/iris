@@ -85,8 +85,8 @@ handleKey m ke =
 |||
 |||   runTUI     todoApp   ← terminal
 |||   runWeb     todoApp   ← browser
+|||   runMobile  todoApp   ← Canvas/WebView (iOS / Android)
 |||   runDesktop todoApp   ← desktop window  (future)
-|||   runMobile  todoApp   ← iOS / Android   (future)
 public export
 todoApp : UIApp Model Msg
 todoApp = MkApp (initModel, none) update view (\m, e => case e of KeyboardEvent ke => handleKey m ke; _ => Nothing) (Just Tick)

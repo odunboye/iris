@@ -40,9 +40,9 @@ This example is a textbook Elm Architecture (TEA) application:
 │   history : List Double — completion ratios over time (sparkline)    │
 └──────────────────────────────────────────────────────────────────────┘
          │                             │
-         │ view                        │ subscriptions
+         │ view                        │ handleEvent
          ▼                             ▼
- Widget Msg tree              Sub Msg (keyboard events)
+ Widget Msg tree              KeyboardEvent -> Maybe Msg
          │                             │
          ▼                             │
   TUI Renderer                         │
@@ -57,7 +57,10 @@ This example is a textbook Elm Architecture (TEA) application:
 
 ```
 src/
-├── Main.idr          — seed data, App wiring, entry point
+├── Main.idr          — terminal entry point (runTUI todoApp)
+├── MainWeb.idr        — browser entry point (runWeb todoApp)
+├── MainMobile.idr      — Canvas/WebView entry point (runMobile todoApp)
+├── TodoApp.idr        — seed data, keyboard-to-Msg mapping, the shared UIApp value
 └── Todo/
     ├── Types.idr     — Task, Screen, Model, Msg   (no IO)
     ├── Update.idr    — pure update function        (no IO)
@@ -65,7 +68,8 @@ src/
 ```
 
 **Zero IO in Types, Update, or View** — all platform interaction is
-handled by the Iris runtime and expressed as typed `Cmd`/`Sub` values.
+handled by the Iris runtime and expressed as typed `Cmd` values and the
+`handleEvent`/`tickMsg` fields of `UIApp`.
 
 ---
 
@@ -73,9 +77,9 @@ handled by the Iris runtime and expressed as typed `Cmd`/`Sub` values.
 
 | Feature | Where |
 |---|---|
-| TEA `App` record | `Main.idr` — `todoApp` |
-| Keyboard `Sub` | `Update.idr` — `subscriptions` |
-| `onKeyDown` / `matchKey` | `Update.idr` — `listKeyHandler`, `addKeyHandler` |
+| `UIApp` record | `TodoApp.idr` — `todoApp` |
+| `handleEvent` keyboard dispatch | `TodoApp.idr` — `handleKey` |
+| `tickMsg` | `TodoApp.idr` — `todoApp`'s `Just Tick` |
 | `tuiList` widget | `View.idr` — `taskListWidget` |
 | `tuiProgress` widget | `View.idr` — progress bar |
 | `tuiSpinner` widget | `View.idr` — animated spinner |

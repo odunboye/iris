@@ -4,8 +4,6 @@
 module Todo.Update
 
 import Iris.State.TEA
-import Iris.Effect.Keyboard
-import Iris.Platform.Event
 import Iris.Widget.TUI.List
 import Iris.Widget.TUI.Input
 import Todo.Types
@@ -42,46 +40,6 @@ listStatus ts =
       tc = length ts
   in show dc ++ "/" ++ show tc ++ " done   "
   ++ "[arrows] navigate  [space] toggle  [a] add  [d] delete  [q] quit"
-
--- ─── Keyboard → Msg (used by subscriptions) ─────────────────────────────────
-
-||| Translate a KeyEvent to a Msg on the task-list screen.
-listKeyHandler : Model -> KeyEvent -> Msg
-listKeyHandler _ ke =
-  case ke.key of
-    "ArrowUp"   => NavUp
-    "ArrowDown" => NavDown
-    " "         => ToggleSelected
-    "a"         => GoToAdd
-    "d"         => DeleteSelected
-    "q"         => Quit
-    _           => NoOp
-
-||| Translate a KeyEvent to a Msg on the add screen.
-addKeyHandler : KeyEvent -> Msg
-addKeyHandler ke =
-  case ke.key of
-    "Enter"     => Confirm
-    "Escape"    => Cancel
-    "Backspace" => TypeBack
-    "Delete"    => TypeDel
-    "ArrowLeft" => CursorLeft
-    "ArrowRight"=> CursorRight
-    "Home"      => CursorHome
-    "End"       => CursorEnd
-    _           => case ke.char of
-                     Just c  => TypeChar c
-                     Nothing => NoOp
-
--- ─── Subscriptions ──────────────────────────────────────────────────────────
-
-||| Active subscriptions depend on which screen is showing.
-public export
-subscriptions : Model -> Sub Msg
-subscriptions m =
-  case m.screen of
-    TaskListScreen => onKeyDown (listKeyHandler m)
-    AddScreen      => onKeyDown addKeyHandler
 
 -- ─── Update ─────────────────────────────────────────────────────────────────
 
