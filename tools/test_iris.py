@@ -424,6 +424,17 @@ class AddTargetsTests(unittest.TestCase):
         self.assertIn('[custom.all.greeter-canvas]', toml)
         self.assertTrue((self.project / 'canvas.ipkg').is_file())
 
+    def test_mobile_host_sizes_canvas_independently_of_its_bitmap(self):
+        mobile.add_targets(['mobile'], 'Greeter', 'app', force=False,
+                           capacitor=str(self.root / 'capacitor'))
+        html = (self.project / 'public/index.html').read_text()
+        css = (self.project / 'public/canvas.css').read_text()
+        self.assertIn('<link rel="stylesheet" href="canvas.css">', html)
+        self.assertIn('width:100%;height:100%', css)
+        self.assertIn('#iris-canvas{display:block;', css)
+        config = json.loads((self.project / 'iris.mobile.json').read_text())
+        self.assertIn('*.css', config['assets'])
+
     def test_cli_layer_defaults_module_to_capitalized_cwd_name(self):
         # No --module: main() must derive 'Greeter' from the cwd ('greeter'),
         # matching the module new_project already generated for this fixture.

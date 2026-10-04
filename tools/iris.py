@@ -425,8 +425,12 @@ def new_target(project, target, module, app_value, name, force, capacitor=None, 
         new_write(project / 'public/index.html',
                   '<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
                   '<meta name="viewport" content="width=device-width,initial-scale=1">'
-                  f'<title>{title}</title></head><body><canvas id="iris-canvas"></canvas>'
+                  f'<title>{title}</title><link rel="stylesheet" href="canvas.css"></head><body>'
+                  '<canvas id="iris-canvas"></canvas>'
                   '<script src="app.js"></script></body></html>\n', force)
+        new_write(project / 'public/canvas.css',
+                  'html,body{margin:0;width:100%;height:100%;overflow:hidden}'
+                  '#iris-canvas{display:block;width:100%;height:100%;touch-action:none}\n', force)
         config_path = project / 'iris.mobile.json'
         if config_path.exists() and not force:
             raise ValueError('Refusing to overwrite existing file (use --force): ' + str(config_path))
