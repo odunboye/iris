@@ -5,9 +5,13 @@
 pre-Flux name, `iris`) and later moved back out to its own repo under that
 original name, since it has no Flux-specific dependencies (its `ipkg`
 depends only on `contrib`). The module prefix changed from `Flux.UI.*` back
-to `Iris.*` as part of that move. `Flux.Platform.Client`/`Flux.Mobile` (Flux's
-generated RPC client and Capacitor glue, which depend on this package) stayed
-in Flux, the same way `flux-db-flux` stayed behind when `db` was extracted.
+to `Iris.*` as part of that move. Flux's generated RPC client (`flux-client`)
+and Capacitor glue (`flux-mobile`) turned out to have the same property - no
+real dependency on Flux - and later joined this repo too, as the
+[`iris-client`](client/README.md) and [`iris-mobile`](mobile/README.md)
+sub-packages. Flux's own mobile CLI packaging/bundling tooling stayed in
+Flux regardless, the same way its application build/dev CLI stays put
+regardless of which UI framework an app imports.
 
 Iris is an experimental cross-platform declarative UI framework for Idris 2.
 Applications describe a pure model/update/view loop and render through terminal,
@@ -104,6 +108,14 @@ make terminal
 make web
 make mobile-preview
 ```
+
+## Sub-packages
+
+- [`client/`](client/README.md) (`iris-client`) - a portable typed
+  JSON-RPC-over-HTTP client runtime for Iris applications.
+- [`mobile/`](mobile/README.md) (`iris-mobile`) - Capacitor command/
+  subscription bindings and native session persistence for Iris's `Cmd`/`Sub`
+  model.
 
 ## Capacitor validation
 
