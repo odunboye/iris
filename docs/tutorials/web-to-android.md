@@ -102,13 +102,13 @@ Open `http://127.0.0.1:8080/`. You should see `Count: 0`; clicking Increment
 changes it to `Count: 1`. Stop the server with Ctrl+C. After editing Idris
 source, rebuild `web.ipkg` and reload the page.
 
-`pack.toml` pins Iris to the scaffolding checkout's current commit. That commit
-must be available from its git remote: `pack build web.ipkg` resolves it
-through Pack directly, and `iris compile` (used for the mobile target in step
-4) clones it into a local cache the first time it's needed. If you scaffold
-from an unpublished local commit, replace the `[custom.all.iris]` section with
-`type = "local"` and `path = "/absolute/path/to/iris"` instead - both commands
-accept a local dependency the same way.
+`pack.toml` pins Iris to the scaffolding checkout's current commit. Both
+`pack build web.ipkg` and `iris compile` (used for the mobile target in step
+4) resolve that commit automatically from its git remote - `iris compile`
+clones it into a local cache the first time it's needed - so no pack.toml edit
+is required. See [troubleshooting](../troubleshooting/startup.md#mobile-compile-fails-to-resolve-a-dependency)
+if the pinned commit isn't available from its remote, for example after
+scaffolding from an unpublished local commit.
 
 ## 3. Add the mobile entry point
 
