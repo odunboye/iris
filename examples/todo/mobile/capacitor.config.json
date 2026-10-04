@@ -1,5 +1,5 @@
 {
-  "appId":   "dev.fluxui.todo",
+  "appId":   "dev.iris.todo",
   "appName": "Iris Todo",
   "webDir":  "www",
   "server": {
