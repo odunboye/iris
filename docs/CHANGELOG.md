@@ -23,7 +23,7 @@
 
 # Changelog
 
-All notable changes to Flux UI are recorded here. The project follows Semantic
+All notable changes to Iris are recorded here. The project follows Semantic
 Versioning within the normal compatibility limits of a pre-1.0 release.
 
 ## Unreleased — runner lifecycle cleanup
