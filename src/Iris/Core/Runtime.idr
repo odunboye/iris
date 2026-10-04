@@ -1,6 +1,6 @@
 ||| Legacy or experimental API; not a supported application runner.
 ||| Start with Iris, Iris.App.UIApp and a specialized runner.
-||| See packages/ui/API_STABILITY.md and CAPABILITIES.md.
+||| See API_STABILITY.md and CAPABILITIES.md.
 ||| Iris.Core.Runtime
 ||| The Iris main loop.
 ||| Ties together: TEA state, event dispatch, reconciler, and the PAL.

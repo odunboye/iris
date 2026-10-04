@@ -1,6 +1,6 @@
 ||| Legacy or experimental API; not a supported application runner.
 ||| Start with Iris, Iris.App.UIApp and a specialized runner.
-||| See packages/ui/API_STABILITY.md and CAPABILITIES.md.
+||| See API_STABILITY.md and CAPABILITIES.md.
 ||| Iris.Backend.Embedded.Framebuffer
 ||| Bare-metal Linux framebuffer (/dev/fb0) backend.
 ||| Designed for ARM Cortex-M4+ and Raspberry Pi.

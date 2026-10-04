@@ -1,6 +1,6 @@
 ||| Legacy or experimental API; not a supported application runner.
 ||| Start with Iris, Iris.App.UIApp and a specialized runner.
-||| See packages/ui/API_STABILITY.md and CAPABILITIES.md.
+||| See API_STABILITY.md and CAPABILITIES.md.
 ||| Iris.Platform.Interface
 ||| The Platform Abstraction Layer (PAL).
 ||| Each backend supplies concrete implementations of these records.
