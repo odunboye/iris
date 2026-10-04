@@ -563,8 +563,8 @@ def main(argv=None):
     newer = commands.add_parser('new', help='create a new project from nothing (like `pack new bin`)')
     newer.add_argument('name', help='project directory name and package/executable base name')
     newer.add_argument('--target', nargs='+', choices=sorted(NEW_TARGETS), default=None,
-                       help='targets to scaffold (default: web, plus mobile if a capacitor checkout and '
-                            '--app-id are available)')
+                       help='targets to scaffold (default: web and mobile; mobile is dropped if no '
+                            'capacitor checkout is known and none can be cloned automatically)')
     newer.add_argument('--project', type=Path, help="project directory (default: ./<name>)")
     newer.add_argument('--module', help='shared module to generate, exporting `app_value : UIApp model msg` '
                                         '(default: <Name>)')
@@ -609,18 +609,30 @@ def main(argv=None):
         return
     if args.command in ['new', 'add']:
         try:
-            requested = args.target or []
-            wants_mobile = 'mobile' in requested or (args.command == 'new' and not args.target and args.app_id)
             capacitor = args.capacitor or remembered_capacitor()
-            if capacitor is None and wants_mobile:
-                capacitor = default_capacitor()
             if args.command == 'new':
                 project = args.project or (Path.cwd() / args.name)
                 module = args.module or (args.name[0].upper() + args.name[1:])
-                targets = args.target or (['web', 'mobile'] if capacitor and args.app_id else ['web'])
+                if args.target:
+                    if 'mobile' in args.target and capacitor is None:
+                        capacitor = default_capacitor()
+                    targets = args.target
+                else:
+                    # web + mobile by default; mobile only drops out if no
+                    # capacitor is known and none can be cloned right now
+                    # (e.g. offline) - that shouldn't block scaffolding web.
+                    if capacitor is None:
+                        try:
+                            capacitor = default_capacitor()
+                        except (OSError, subprocess.SubprocessError) as error:
+                            print(f'Could not set up a capacitor checkout automatically ({error}) - '
+                                  'scaffolding web only; run ./iris add mobile once one is available.')
+                    targets = ['web', 'mobile'] if capacitor else ['web']
                 new_project(project, args.name, targets, module, args.app_value,
                            capacitor, args.app_id, args.app_name)
             else:
+                if 'mobile' in args.target and capacitor is None:
+                    capacitor = default_capacitor()
                 module = args.module or (Path.cwd().name[0].upper() + Path.cwd().name[1:])
                 add_targets(args.target, module, args.app_value, args.force,
                            capacitor, args.app_id, args.app_name)

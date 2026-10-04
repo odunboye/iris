@@ -340,6 +340,44 @@ class NewProjectTests(unittest.TestCase):
         self.assertFalse((project / 'canvas.ipkg').exists())
 
 
+class NewCliDefaultTargetsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.origin_patch = patch.object(mobile, 'git_iris_origin', return_value=('https://example.test/iris.git', 'deadbeef'))
+        self.origin_patch.start()
+        self.addCleanup(self.origin_patch.stop)
+        self.cwd_patch = patch.object(mobile.Path, 'cwd', return_value=self.root)
+        self.cwd_patch.start()
+        self.addCleanup(self.cwd_patch.stop)
+        self.remembered_patch = patch.object(mobile, 'remembered_capacitor', return_value=None)
+        self.remembered_patch.start()
+        self.addCleanup(self.remembered_patch.stop)
+
+    def test_bare_new_defaults_to_web_and_mobile(self):
+        fake_cap = self.root / 'capacitor'; fake_cap.mkdir()
+        with patch.object(mobile, 'default_capacitor', return_value=fake_cap):
+            mobile.main(['new', 'greeter'])
+        toml = (self.root / 'greeter/pack.toml').read_text()
+        self.assertIn('[custom.all.greeter-web]', toml)
+        self.assertIn('[custom.all.greeter-mobile]', toml)
+
+    def test_bare_new_falls_back_to_web_only_when_capacitor_unavailable(self):
+        with patch.object(mobile, 'default_capacitor', side_effect=OSError('offline')):
+            mobile.main(['new', 'greeter'])
+        toml = (self.root / 'greeter/pack.toml').read_text()
+        self.assertIn('[custom.all.greeter-web]', toml)
+        self.assertNotIn('[custom.all.greeter-mobile]', toml)
+        self.assertFalse((self.root / 'greeter/mobile.ipkg').exists())
+
+    def test_explicit_target_mobile_propagates_clone_failure_instead_of_falling_back(self):
+        with patch.object(mobile, 'default_capacitor', side_effect=OSError('offline')):
+            with self.assertRaises(SystemExit):
+                mobile.main(['new', 'greeter', '--target', 'mobile'])
+        self.assertFalse((self.root / 'greeter').exists())
+
+
 class AddTargetsTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

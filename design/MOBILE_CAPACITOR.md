@@ -81,18 +81,21 @@ refused once a host exists; migration requires deliberate host management.
 <name>`: run from the intended parent directory, it creates `./<name>/` from
 nothing - a starter model module (a trivial counter exporting `app : UIApp
 Nat Msg`), `pack.toml` (pinning `iris` as a git dependency at this checkout's
-current commit), and one backend target (`web` by default) with its entry
-module, ipkg and HTML shell. It refuses to run if `<name>` already exists.
+current commit), and, with no `--target` given, both the `web` and `mobile`
+targets (each with its entry module, ipkg and HTML/config shell). It refuses
+to run if `<name>` already exists.
 
 ```sh
-./iris new greeter                             # web, starter module
-./iris new greeter --target terminal canvas     # multiple targets at once
-./iris new greeter --app-id com.example.greeter # web + mobile (an --app-id is
-                                                 # what signals wanting mobile
-                                                 # by default here, though it's
-                                                 # not otherwise required - see
-                                                 # below)
+./iris new greeter                          # web + mobile by default
+./iris new greeter --target web             # web only, explicitly
+./iris new greeter --target terminal canvas # any explicit target list
 ```
+
+`mobile` only drops out of that default pair if no capacitor checkout is
+known *and* none can be cloned automatically right now (offline, GitHub
+unreachable, ...) - scaffolding still succeeds with `web` alone in that case,
+with a note explaining why; see below. An explicit `--target mobile` has no
+such fallback and fails loudly instead, since you asked for it specifically.
 
 `./iris add <target> [<target> ...]` adds a target to the project in the
 **current directory** - run it from inside a project `new` already created.
@@ -136,10 +139,13 @@ first time a target actually needs it. This only ever happens once per
 machine; every call after the first hits the remembered path directly. Pack's
 own git-dependency cache can't stand in for this: it only fetches what Idris
 compilation needs (the `.ipkg` and the modules actually imported), not the
-full checkout `npm ci`/the native plugin files require. `new`'s default
-target list becomes `web mobile` precisely when `--app-id` is given (a
-capacitor checkout, explicit, remembered, or freshly cloned, becomes
-available in that case); otherwise it stays `web`.
+full checkout `npm ci`/the native plugin files require. For `new`'s implicit
+`web mobile` default specifically, a clone failure is caught and downgrades
+to `web` alone with an explanatory note rather than failing the whole
+command - scaffolding a project shouldn't require network access to succeed
+at all. An explicit `--target mobile` (on `new` or `add`) gets no such
+downgrade: that failure is reported and the command exits nonzero, since
+mobile was asked for by name.
 
 ## Commands
 
