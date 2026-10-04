@@ -78,11 +78,11 @@ loading. Signing and store packaging remain deployment responsibilities.
   native scrolling system.
 - Managed `CancellableTask` effects are cancelled during lifecycle suspension and stale
   generation callbacks are rejected after resume. Canvas `QuitApp` tears down the overlay, listeners and generated stylesheet
-  even when quitting during event dispatch; see [capabilities](CAPABILITIES.md).
+  even when quitting during event dispatch; see [capabilities](capabilities.md).
   Legacy `Task` actions cannot
   be forcibly interrupted; use `CancellableTask` for long-running production IO.
 - Desktop SDL2 and embedded framebuffer modules are experimental skeletons and
   are not covered by this release checklist.
 
-See [the capability matrix](CAPABILITIES.md) for terminal differences and
-[the implemented architecture](ARCHITECTURE.md) for precisely scoped guarantees.
+See [the capability matrix](capabilities.md) for terminal differences and
+[the implemented architecture](../concepts/architecture.md) for precisely scoped guarantees.

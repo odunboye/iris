@@ -127,8 +127,8 @@ make native-check
 ./scripts/validate-native.sh android
 ```
 
-See [`WEB_MOBILE_COMPLETION.md`](WEB_MOBILE_COMPLETION.md) for the complete
-release checklist.
+See [the release checklist](docs/reference/release-checklist.md) for the
+complete list.
 
 ## Packaging CLI
 
@@ -151,14 +151,15 @@ iris run android
 
 See [the CLI reference](docs/reference/cli.md) and
 [the full web-to-Android tutorial](docs/tutorials/web-to-android.md).
-[`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) covers detailed
+[The packaging design](docs/reference/mobile-capacitor.md) covers detailed
 ownership and publication mechanics.
 
 ## Supported scope
 
-See [the capability matrix](CAPABILITIES.md) for controls, layout, input, focus,
-accessibility, cancellation and lifecycle differences, and
-[the implemented architecture](ARCHITECTURE.md) for the application contract.
+See [the capability matrix](docs/reference/capabilities.md) for controls, layout,
+input, focus, accessibility, cancellation and lifecycle differences, and
+[the implemented architecture](docs/concepts/architecture.md) for the
+application contract.
 
 
 | Target | Status |
@@ -177,8 +178,8 @@ forcibly stopped. The legacy
 `Iris.Core.Widget`/`Iris.Core.Runtime` path is retained for compatibility; new
 applications should use `Iris.Widget` and the specialized runners.
 
-See [`API_STABILITY.md`](API_STABILITY.md), [`SECURITY.md`](SECURITY.md), and
-[`CHANGELOG.md`](CHANGELOG.md) before deploying.
+See [API stability](docs/reference/api-stability.md), [`SECURITY.md`](SECURITY.md),
+and [the changelog](docs/CHANGELOG.md) before deploying.
 
 ## License
 

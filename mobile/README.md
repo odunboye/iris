@@ -82,7 +82,7 @@ Physical-device, biometric and full application lifecycle validation remain sepa
 Application packaging/staging/release tooling
 (`./iris setup/check/compile/build/sync/open/run`, moved here from
 [odunboye/flux](https://github.com/odunboye/flux) - see the
-[mobile integration design](../design/MOBILE_CAPACITOR.md)) treats `capacitor`
+[mobile integration design](../docs/reference/mobile-capacitor.md)) treats `capacitor`
 as an external dependency, not something vendored into an application's
 workspace map.
 

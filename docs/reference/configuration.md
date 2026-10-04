@@ -66,9 +66,9 @@ Format 2 requires a canonical HTTPS `apiOrigin` and exactly one CSP meta element
 with the required directives. It binds `connect-src` to the configured API and
 initializes immutable runtime configuration before the app. Format 1 cannot
 initialize `Iris.Mobile.Client.mobileClient`. Follow the complete
-[configuration contract](../../design/MOBILE_CAPACITOR.md#configuration) before
+[configuration contract](mobile-capacitor.md#configuration) before
 switching formats.
 
 Native identity changes are refused after a host exists. Releases and native
 hosts are owned outputs, not interchangeable folders to reuse between apps.
-See [ownership](../../design/MOBILE_CAPACITOR.md#ownership-and-publication).
+See [ownership](mobile-capacitor.md#ownership-and-publication).

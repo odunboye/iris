@@ -4,7 +4,7 @@ This covers this repo's own application-packaging/build CLI for Capacitor
 targets (`./iris setup/check/compile/build/sync/open/run/new/add`) - it
 packages whatever UI application you point it at. The `Iris.Mobile` library
 itself (Capacitor command/subscription bindings, native session persistence)
-has its own [mobile library guide](../mobile/README.md).
+has its own [mobile library guide](../../mobile/README.md).
 
 ## Architecture
 

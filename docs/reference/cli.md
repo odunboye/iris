@@ -20,7 +20,7 @@ instead of dropping the requested target. Existing projects are refused;
 
 Capacitor checkout resolution uses the explicit option, a remembered setup
 path, then automatic cache setup. Details live in
-[the packaging design](../../design/MOBILE_CAPACITOR.md#starting-a-project).
+[the packaging design](mobile-capacitor.md#starting-a-project).
 The default app ID is a printed `com.example.*` development identity.
 
 ## Setup and validation
@@ -58,4 +58,4 @@ with an explicit device ID.
 
 Source: [tools/iris.py](../../tools/iris.py). Configuration and ownership:
 [configuration reference](configuration.md) and
-[packaging design](../../design/MOBILE_CAPACITOR.md).
+[packaging design](mobile-capacitor.md).

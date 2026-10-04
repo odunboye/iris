@@ -20,5 +20,5 @@ Open http://127.0.0.1:8080/index.html for DOM or
 http://127.0.0.1:8080/canvas.html for Canvas. Use the Increment button or press `i` to change the count; Quit or `q`
 stops the runner. Terminal Ctrl+C also exits.
 
-See [capabilities](../../CAPABILITIES.md) for backend differences and
+See [capabilities](../../docs/reference/capabilities.md) for backend differences and
 [the Todo application](../todo/src/TodoApp.idr) for a larger shared application.

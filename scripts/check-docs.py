@@ -71,7 +71,7 @@ def examples(root=ROOT):
 
 def main():
     paths = set(ROOT.glob('*.md'))
-    for directory in ['docs', 'design', 'examples', 'client', 'mobile']:
+    for directory in ['docs', 'examples', 'client', 'mobile']:
         paths.update(p for p in (ROOT / directory).rglob('*.md')
                      if not {'build', 'node_modules', '.workspace'} & set(p.relative_to(ROOT).parts))
     errors = [error for path in sorted(paths) for error in link_errors(path)]

@@ -84,7 +84,7 @@ Commit source, package files, `pack.toml`, host HTML/CSS and mobile configuratio
 Ignore compiler `build/` directories and `.workspace/`. For native releases,
 decide how to preserve deliberate native project edits: the CLI retains native
 sources, but generated assets are replaced on sync. See
-[ownership and publication](../../design/MOBILE_CAPACITOR.md#ownership-and-publication).
+[ownership and publication](../reference/mobile-capacitor.md#ownership-and-publication).
 
 Do not run `iris new greeter` inside the existing `greeter` project to add
 platforms. Use `iris add`; `new` creates a fresh directory and refuses existing

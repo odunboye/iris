@@ -1,8 +1,8 @@
 # Iris implemented architecture
 
-Start with [the runnable counter](examples/counter/README.md). The supported
+Start with [the runnable counter](../../examples/counter/README.md). The supported
 application surface is exported by `import Iris`; choose a runner explicitly.
-The [capability matrix](CAPABILITIES.md) defines backend differences.
+The [capability matrix](../reference/capabilities.md) defines backend differences.
 
 ```text
 UIApp: init + update + view + handleEvent + tickMsg
@@ -40,18 +40,18 @@ record are compatibility APIs, not the subscription contract of `UIApp`.
 The specialized runners are the implementation reference. The generic
 `Core.Runtime`, `Core.Widget` and old `Backend.Web.DOM` PAL adapter are retained
 compatibility paths. SDL2, framebuffer and the generic PAL do not provide
-supported application runners. See [API policy](API_STABILITY.md).
+supported application runners. See [API policy](../reference/api-stability.md).
 
 ## Guarantees and evidence
 
 | Property | Mechanism and evidence | Limit |
 |---|---|---|
-| Application message types | `UIApp model msg`, `Widget msg`, `Cmd msg`; [PublicAPITest](tests/PublicAPITest.idr) | Does not prove business logic or rendering correct |
-| Event boundary validation | Versioned decoder; [EventWireTest](tests/EventWireTest.idr) | Internal protocol, not arbitrary network input validation |
-| Browser effect retirement | Managed generations and cleanup; [RuntimeTest](tests/RuntimeTest.idr), [terminal runtime tests](tests/TerminalRuntimeTest.idr), browser acceptance | Cooperative work only; raw IO cannot be forcibly stopped |
-| Canvas hit targets and layout | [CanvasLayoutTest](tests/CanvasLayoutTest.idr) | Concrete tested cases, not a general layout proof |
-| DOM escaping and semantics | [DOMRenderTest](tests/DOMRenderTest.idr), [browser tests](tests/browser/iris.spec.js) | No complete accessibility certification |
-| Terminal startup and exit | [native smoke checks](tests/native_smoke.py) | Cooperative cleanup verified; arbitrary raw IO is not joined |
+| Application message types | `UIApp model msg`, `Widget msg`, `Cmd msg`; [PublicAPITest](../../tests/PublicAPITest.idr) | Does not prove business logic or rendering correct |
+| Event boundary validation | Versioned decoder; [EventWireTest](../../tests/EventWireTest.idr) | Internal protocol, not arbitrary network input validation |
+| Browser effect retirement | Managed generations and cleanup; [RuntimeTest](../../tests/RuntimeTest.idr), [terminal runtime tests](../../tests/TerminalRuntimeTest.idr), browser acceptance | Cooperative work only; raw IO cannot be forcibly stopped |
+| Canvas hit targets and layout | [CanvasLayoutTest](../../tests/CanvasLayoutTest.idr) | Concrete tested cases, not a general layout proof |
+| DOM escaping and semantics | [DOMRenderTest](../../tests/DOMRenderTest.idr), [browser tests](../../tests/browser/iris.spec.js) | No complete accessibility certification |
+| Terminal startup and exit | [native smoke checks](../../tests/native_smoke.py) | Cooperative cleanup verified; arbitrary raw IO is not joined |
 
 Types enforce the relationships encoded in their definitions. They do not
 establish blanket layout validity, absence of leaks, or freedom from runtime
@@ -61,7 +61,7 @@ that bound; layout dimensions and offsets require application judgment.
 Run `make check` from this repo's root with the documented
 prerequisites to exercise the supported suite. Future GPU/resource proofs,
 desktop/embedded backends and wider architectural proposals live in
-[FUTURE_DESIGN.md](FUTURE_DESIGN.md); they are not release commitments.
+[FUTURE_DESIGN.md](../FUTURE_DESIGN.md); they are not release commitments.
 
 ## Commands and compatibility boundary
 
@@ -74,5 +74,5 @@ separation does not require removing their runners or modules.
 `Style.control` is interpreted by DOM and Canvas's native semantic overlay.
 Shared control markup and focus requests live in `Backend.Web.Control`. Terminal
 uses disabled metadata for presentation; its application event handler owns
-interaction. The [form example](examples/form/README.md) makes those differences
+interaction. The [form example](../../examples/form/README.md) makes those differences
 explicit while sharing its model/update/view.

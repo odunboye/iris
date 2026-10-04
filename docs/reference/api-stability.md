@@ -2,7 +2,7 @@
 
 Iris is currently `0.x`: minor releases may contain source-breaking changes,
 but changes must include release notes and a migration path. The 0.3 rename is
-an explicit breaking cutover with no legacy aliases; see [MIGRATION.md](MIGRATION.md).
+an explicit breaking cutover with no legacy aliases; see [MIGRATION.md](../MIGRATION.md).
 
 ## Supported toolchain
 
@@ -11,9 +11,9 @@ an explicit breaking cutover with no legacy aliases; see [MIGRATION.md](MIGRATIO
 - Python: 3.11+ for the CLI and documentation checks
 - Capacitor: 5.x in the older Todo example; 8.4.3 in the current packaging tooling
 
-See the [packaging lockfile](tooling/package-lock.json),
-[Todo manifest](examples/todo/mobile/package.json) and
-[validation guidance](docs/guides/testing-and-release.md) for the distinct environments.
+See the [packaging lockfile](../../tooling/package-lock.json),
+[Todo manifest](../../examples/todo/mobile/package.json) and
+[validation guidance](../guides/testing-and-release.md) for the distinct environments.
 
 ## Stable application surface
 
@@ -49,7 +49,7 @@ deprecations, and migration instructions.
 
 Use `import Iris` for `UIApp`, `Widget`, `Cmd` and platform events. It does not
 re-export legacy widget/runtime or PAL modules. Choose a specialized runner in
-your entry module. Start with [the counter](examples/counter/README.md).
+your entry module. Start with [the counter](../../examples/counter/README.md).
 
 `State.TEA.App`, `simpleApp` and `Sub` are legacy runtime APIs; `UIApp` has no
 subscription field. `Backend.Terminal.App.TUIApp` and `Widget.TUI.*` are
@@ -60,10 +60,10 @@ the current counter demo lives in `examples/counter` and is credential-free.
 depending on `iris` under any backend - including `--cg javascript` - never
 tries to build a terminal-only demo.
 
-See [CAPABILITIES.md](CAPABILITIES.md) before relying on runner-specific behavior.
+See [CAPABILITIES.md](capabilities.md) before relying on runner-specific behavior.
 Desktop SDL2, embedded framebuffer and the generic PAL remain experimental.
 Their presence in the package manifest does not confer supported status.
-Future design proposals are in [FUTURE_DESIGN.md](FUTURE_DESIGN.md).
+Future design proposals are in [FUTURE_DESIGN.md](../FUTURE_DESIGN.md).
 
 ## Explicit identity and finite effects
 

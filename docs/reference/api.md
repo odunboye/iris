@@ -71,7 +71,7 @@ and generic PAL paths are experimental, not equivalent supported runners.
 Keyboard keys use names such as `Enter`, `ArrowUp` and `i`; action is `KeyDown`,
 `KeyUp` or `KeyRepeat`. Lifecycle includes visibility, pause/resume, back requests
 and location changes. EventWire is an internal versioned boundary, not a public
-network protocol; see [API policy](../../API_STABILITY.md#eventwire-guarantees).
+network protocol; see [API policy](api-stability.md#eventwire-guarantees).
 
 ## Additional modules
 
@@ -82,7 +82,7 @@ network protocol; see [API policy](../../API_STABILITY.md#eventwire-guarantees).
 | Layout metrics | [Iris.Backend.Canvas.Layout](../../src/Iris/Backend/Canvas/Layout.idr) |
 | RPC transport and authentication | [iris-client](../../client/README.md) |
 | Native commands, listeners and sessions | [iris-mobile](../../mobile/README.md) |
-| Compatibility boundary | [API stability](../../API_STABILITY.md), [migration](../../MIGRATION.md) |
+| Compatibility boundary | [API stability](api-stability.md), [migration](../MIGRATION.md) |
 
 For release guarantees and limitations, use the
-[capability matrix](../../CAPABILITIES.md), not the package manifest alone.
+[capability matrix](capabilities.md), not the package manifest alone.

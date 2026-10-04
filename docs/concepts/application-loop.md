@@ -20,7 +20,7 @@ a precise scheduler.
 Share the application contract, not assumptions about pixels or interaction.
 DOM controls have browser layout and native focus. Canvas paints a cell-based
 layout and provides a semantic control overlay. Terminal applications map key
-input themselves. See [capabilities](../../CAPABILITIES.md).
+input themselves. See [capabilities](../reference/capabilities.md).
 
 ## Starting and completing effects
 
@@ -54,4 +54,4 @@ that arbitrary external IO or an already-started native action was undone.
 
 The older `Iris.State.TEA.App` has a subscription contract. `UIApp` has no `Sub`
 field; mixing the two application APIs leads to misleading examples.
-See [API policy](../../API_STABILITY.md).
+See [API policy](../reference/api-stability.md).

@@ -1,7 +1,7 @@
 # Flux UI — future design and historical architecture
 
 > This is a historical design proposal, not a supported API or a correctness guarantee.
-> Start with [the implemented architecture](ARCHITECTURE.md) and [capabilities](CAPABILITIES.md).
+> Start with [the implemented architecture](concepts/architecture.md) and [capabilities](reference/capabilities.md).
 >
 > A cross-platform declarative UI framework written in Idris2, targeting
 > Web, Desktop, Mobile, Embedded, **and TUI (terminal)** from a single codebase.
@@ -67,7 +67,7 @@ This document describes the full target architecture. The terminal, Web DOM, and
 hybrid-mobile Canvas foundation is implemented; desktop, embedded, and several
 advanced framework layers remain design intent. Status tags (✅ / 🚧 / 📋) are used
 throughout the document to distinguish shipped behavior from plans. The executable
-release checklist is [`WEB_MOBILE_COMPLETION.md`](WEB_MOBILE_COMPLETION.md).
+release checklist is [the release checklist](reference/release-checklist.md).
 
 **✅ Built and working today:**
 

@@ -62,8 +62,8 @@ Select app identity before generating a native host. Record compiler, Iris,
 Capacitor and application revisions and keep dependency lockfiles. Recompile
 and rebundle from source rather than modifying staged assets.
 
-Use [the release checklist](../../WEB_MOBILE_COMPLETION.md),
-[API policy](../../API_STABILITY.md) and [security guidance](../../SECURITY.md).
+Use [the release checklist](../reference/release-checklist.md),
+[API policy](../reference/api-stability.md) and [security guidance](../../SECURITY.md).
 Native signing, permissions, platform manifests and store submission are
 application responsibilities. Provisioned native checks are described in the
-[packaging design](../../design/MOBILE_CAPACITOR.md#tests).
+[packaging design](../reference/mobile-capacitor.md#tests).

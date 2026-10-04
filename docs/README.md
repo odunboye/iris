@@ -21,9 +21,9 @@ compiling an app from packaging and running it.
 ## Understand Iris
 
 - [The application loop and effect lifetime](concepts/application-loop.md)
-- [Backend capabilities](../CAPABILITIES.md)
-- [Implemented architecture and evidence](../ARCHITECTURE.md)
-- [API stability and legacy APIs](../API_STABILITY.md)
+- [Backend capabilities](reference/capabilities.md)
+- [Implemented architecture and evidence](concepts/architecture.md)
+- [API stability and legacy APIs](reference/api-stability.md)
 
 ## Reference
 

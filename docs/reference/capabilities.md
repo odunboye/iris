@@ -24,8 +24,8 @@ not establish a separate native-widget renderer.
 
 ## Evidence and boundaries
 
-[Architecture](ARCHITECTURE.md#guarantees-and-evidence) maps claims to implementation
-and tests. [The release checklist](WEB_MOBILE_COMPLETION.md) describes portable CI
+[Architecture](../concepts/architecture.md#guarantees-and-evidence) maps claims to implementation
+and tests. [The release checklist](release-checklist.md) describes portable CI
 and native checks. Browser tests cover specific input, focus and history cases;
 they do not certify every browser, assistive technology or native device.
 
