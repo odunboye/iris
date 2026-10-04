@@ -6,7 +6,7 @@ import System
 color : Iris.Widget.UIColor
 color = Iris.Widget.IBlue
 
-command : Iris.State.TEA.Cmd ()
+command : Iris.Effect.Command.Cmd ()
 command = none
 
 app : Iris.App.UIApp Nat ()

@@ -361,17 +361,18 @@ mutual
   cStrokeRound (cx m r.col + 0.5) (cy m r.row + 0.5)
                (cw m r.w - 1.0) (ch m r.h - 1.0) 4.0 ctx
   -- text + cursor
-  cFill "#c9d1d9" ctx
+  cFill (if s.control.disabled then "#6e7681" else "#c9d1d9") ctx
   cFont m.fontSz False False m.font ctx
   cText (inputDisplay s val) (cx m ir.col) (cy m ir.row + m.cellH * 0.75) (cw m ir.w) ctx
   -- blinking cursor placeholder (always on for now)
   let cursorX = cx m ir.col + cast (length val) * m.cellW * 0.6
-  cFill "#58a6ff" ctx
-  cFillRect cursorX (cy m ir.row + 4.0) 2.0 (m.cellH - 8.0) ctx
+  when (not s.control.disabled && not s.control.readOnly) $ do
+    cFill "#58a6ff" ctx
+    cFillRect cursorX (cy m ir.row + 4.0) 2.0 (m.cellH - 8.0) ctx
 
  renderOnCanvas m (WButton s lbl _) r ctx = do
   let bgCol = case s.bg of Nothing => "#21262d"; Just c => irisToCSS c
-      fgCol = case s.fg of Nothing => "#c9d1d9"; Just c => irisToCSS c
+      fgCol = if s.control.disabled then "#6e7681" else case s.fg of Nothing => "#c9d1d9"; Just c => irisToCSS c
   cFill bgCol ctx
   cFillRound (cx m r.col) (cy m r.row) (cw m r.w) (ch m r.h) 6.0 ctx
   cStroke "#30363d" ctx
@@ -395,7 +396,7 @@ mutual
   cStrokeRound (x+0.5) (y+0.5) (sz-1.0) (sz-1.0) 3.0 ctx
   -- check mark
   when checked $ do
-    cFill "#58a6ff" ctx
+    cFill (if s.control.disabled then "#6e7681" else "#58a6ff") ctx
     cFillRound x y sz sz 3.0 ctx
     cFill "#0d1117" ctx
     cFont (sz * 0.9) True False m.font ctx

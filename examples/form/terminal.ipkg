@@ -1,0 +1,7 @@
+package iris-form-terminal
+depends = iris
+sourcedir = "."
+modules = Form, MainTerminal
+main = MainTerminal
+executable = form-terminal
+prebuild = "mkdir -p build/exec/form-terminal_app && cc -dynamiclib ../../c/iristui.c -o build/exec/form-terminal_app/libiristui.dylib 2>/dev/null || cc -shared -fPIC ../../c/iristui.c -o build/exec/form-terminal_app/libiristui.so"

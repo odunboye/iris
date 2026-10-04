@@ -62,3 +62,17 @@ Run `make check` from this repo's root with the documented
 prerequisites to exercise the supported suite. Future GPU/resource proofs,
 desktop/embedded backends and wider architectural proposals live in
 [FUTURE_DESIGN.md](FUTURE_DESIGN.md); they are not release commitments.
+
+## Commands and compatibility boundary
+
+`Iris.Effect.Command` owns Cmd without importing either widget tree. `Iris`,
+UIApp, supported runners and HTTP/client effects use this module directly.
+`Iris.State.TEA` is the explicit compatibility entry point for the old App/Sub
+contract and re-exports commands. Legacy implementations remain packaged so this
+separation does not require removing their runners or modules.
+
+`Style.control` is interpreted by DOM and Canvas's native semantic overlay.
+Shared control markup and focus requests live in `Backend.Web.Control`. Terminal
+uses disabled metadata for presentation; its application event handler owns
+interaction. The [form example](examples/form/README.md) makes those differences
+explicit while sharing its model/update/view.

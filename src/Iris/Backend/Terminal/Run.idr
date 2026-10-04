@@ -14,7 +14,7 @@ module Iris.Backend.Terminal.Run
 import Data.IORef
 import System.Concurrency
 import System.Future
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Platform.Event
 import Iris.App as UIApp
 import Iris.Widget

@@ -40,7 +40,7 @@
 module Iris.Backend.Web.DOM.Run
 
 import Data.IORef
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Platform.Event
 import Iris.App
 import Iris.Widget
@@ -101,7 +101,9 @@ injectCSS : String -> IO ()
 injectCSS css = primIO (prim_injectCSS css)
 
 setHTML : String -> IO ()
-setHTML html = primIO (prim_setHTML html)
+setHTML html = do
+  primIO (prim_setHTML html)
+  focusControls "#iris-app"
 
 setupQueues : IO ()
 setupQueues = primIO prim_setupQueues

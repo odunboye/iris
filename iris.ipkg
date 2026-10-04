@@ -27,6 +27,7 @@ modules =
   , Iris.Runtime.Common
 
   -- State
+  , Iris.Effect.Command
   , Iris.State.TEA
   , Iris.State.Signal
 
@@ -62,6 +63,7 @@ modules =
   , Iris.Backend.Canvas.Run
   , Iris.Backend.Web.DOM
   , Iris.Backend.Web.Terminal
+  , Iris.Backend.Web.Control
   , Iris.Backend.Web.DOM.Render
   , Iris.Backend.Web.DOM.Run
   , Iris.Backend.Desktop.SDL2

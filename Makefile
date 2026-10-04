@@ -6,6 +6,7 @@ build:
 test: build
 	idris2 --install iris.ipkg
 	cd tests && idris2 -p iris PublicAPITest.idr -o public-api-tests
+	cd tests && idris2 -p iris LegacyAPITest.idr -o legacy-api-tests
 	cd tests && idris2 -p iris EventWireTest.idr -o event-wire-tests
 	cd tests && idris2 -p iris RuntimeTest.idr -o runtime-tests
 	cd tests && idris2 -p contrib -p iris TerminalRuntimeTest.idr -o terminal-runtime-tests
@@ -14,6 +15,7 @@ test: build
 	cd tests && idris2 -p iris DOMRenderTest.idr -o dom-render-tests
 	cd tests && idris2 -p iris HttpTest.idr -o http-tests
 	./tests/build/exec/public-api-tests
+	./tests/build/exec/legacy-api-tests
 	./tests/build/exec/event-wire-tests
 	./tests/build/exec/runtime-tests
 	./tests/build/exec/terminal-runtime-tests
@@ -26,6 +28,9 @@ browser-test:
 	npm run test:browser
 
 counter-check:
+	idris2 --cg javascript --build examples/form/web.ipkg
+	idris2 --cg javascript --build examples/form/canvas.ipkg
+	idris2 --build examples/form/terminal.ipkg
 	idris2 --cg javascript --build tests/keyed-dom.ipkg
 	idris2 --build tests/terminal-lifecycle.ipkg
 	idris2 --cg javascript --build tests/canvas-lifecycle.ipkg

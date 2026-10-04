@@ -31,7 +31,7 @@
 module Iris.Effect.Http.Web
 
 import Data.IORef
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.Effect.Http
 
 %default covering

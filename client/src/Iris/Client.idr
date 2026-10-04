@@ -1,7 +1,7 @@
 ||| Portable RPC client glue for Iris. No Flux server or PostgreSQL dependency.
 module Iris.Client
 
-import public Iris.State.TEA
+import public Iris.Effect.Command
 import public Iris.Effect.Http
 import public JSON.Simple
 import Data.String

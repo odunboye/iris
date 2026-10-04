@@ -46,6 +46,18 @@ def check(directory, name, banner, key=b'q', expected=None):
                 if select.select([master], [], [], .1)[0]:
                     output = (output + os.read(master, 65536))[-65536:]
             assert b'Count: 1' in output, output.decode(errors='replace')
+        if name == 'form-terminal':
+            for character in b'Alice\r':
+                os.write(master, bytes([character]))
+                deadline = time.monotonic() + .08
+                while time.monotonic() < deadline:
+                    if select.select([master], [], [], .01)[0]:
+                        output = (output + os.read(master, 65536))[-65536:]
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline and b'Saved: Alice' not in output:
+                if select.select([master], [], [], .1)[0]:
+                    output = (output + os.read(master, 65536))[-65536:]
+            assert b'Saved: Alice' in output, output.decode(errors='replace')
         os.write(master, key)
         # Keep draining: a renderer can otherwise block on the PTY's small
         # output buffer before it gets to consume the quit key.
@@ -81,6 +93,7 @@ def check(directory, name, banner, key=b'q', expected=None):
 if __name__ == '__main__':
     check(ROOT, 'iris-demo', b'Count: 0')
     check(ROOT / 'examples/todo', 'iris-todo', b'Iris Todo')
+    check(ROOT / 'examples/form', 'form-terminal', b'Iris account form', b'\x1b')
 
     for key in [b'q', b'\x03']:
         check(ROOT / 'tests', 'terminal-lifecycle', b'Lifecycle ready', key,

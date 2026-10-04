@@ -67,4 +67,20 @@ main = do
   (inserted, _, _) <- renderPage (vstack [button "New control" 1, WInput stable "value" (const 0)])
   let identity = "id='" ++ controlId "input" stable 0 ++ "'"
   assert "key survives insertion before input" (contains identity keyed && contains identity inserted)
+  let lockedStyle = sAccessibleName "Locked" (sDisabled True defaultStyle)
+  (disabledHTML, disabledClicks, disabledInputs) <- renderPage (vstack
+    [WButton lockedStyle "Save" 1, WCheckbox lockedStyle False 2,
+     WInput lockedStyle "value" (const 3)])
+  assert "disabled controls are native disabled" (contains " disabled" disabledHTML)
+  assert "disabled controls have no dispatch handlers" (null disabledClicks && null disabledInputs)
+  (readOnlyHTML, _, readOnlyInputs) <- renderPage (WInput (sReadOnly True defaultStyle) "reference" (const 1))
+  assert "read-only inputs are native read-only" (contains " readonly" readOnlyHTML && null readOnlyInputs)
+  let described = sInvalid "Invalid <value>" (sDescription "Helpful & safe" (sAccessibleName "Name" (sFocus 2 (sKey "name" defaultStyle))))
+  (describedHTML, _, _) <- renderPage (WInput described "" (const 1))
+  assert "accessible name distinct from title" (contains "aria-label='Name'" describedHTML)
+  assert "description is associated and escaped" (contains "aria-describedby='" describedHTML && contains "Helpful &amp; safe" describedHTML)
+  assert "validation error is associated and escaped" (contains "aria-invalid='true'" describedHTML && contains "aria-errormessage='" describedHTML && contains "Invalid &lt;value&gt;" describedHTML)
+  assert "focus request has explicit token" (contains "data-iris-focus='2'" describedHTML)
+  let dimmed = renderWidget (WButton lockedStyle "Save" 1) (MkWRect 0 0 20 1)
+  assert "terminal disabled controls are visibly dimmed" (contains "\x1b[2m" dimmed)
   putStrLn "DOM renderer tests passed"

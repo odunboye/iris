@@ -2,7 +2,7 @@
 module Iris.Runtime.Common
 
 import Data.IORef
-import Iris.State.TEA
+import Iris.Effect.Command
 import Iris.App
 
 private

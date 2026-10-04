@@ -3,7 +3,8 @@
 module Iris.Mobile
 
 import public Capacitor
-import public Iris.State.TEA
+import public Iris.Effect.Command
+import Iris.State.TEA
 import Data.IORef
 import Control.Monad.MErr
 

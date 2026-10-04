@@ -17,6 +17,7 @@ module Iris.Backend.Web.DOM.Render
 import Data.IORef
 import Data.String
 import Iris.Widget
+import public Iris.Backend.Web.Control
 
 -- ─── Colour mapping ──────────────────────────────────────────────────────────
 
@@ -148,13 +149,6 @@ nextId st = do
   writeIORef st (n + 1)
   pure n
 
-||| DOM identity is independent of the event dispatch counter when keyed.
-public export
-controlId : String -> Style -> Nat -> String
-controlId kind style index = case style.key of
-  Nothing => "iris-" ++ kind ++ "-" ++ show index
-  Just key => "iris-key-" ++ concatMap (\c => show (ord c) ++ "-") (unpack key)
-
 controlIdentity : String -> Style -> Nat -> String
 controlIdentity kind style index = " id='" ++ controlId kind style index ++ "'"
 
@@ -227,29 +221,30 @@ renderHTML (WHStack s children) st idMap inputMap = do
 
 renderHTML (WButton s label msg) st idMap _ = do
   eid <- nextId st
-  modifyIORef idMap ((eid, msg) ::)
+  when (not s.control.disabled) (modifyIORef idMap ((eid, msg) ::))
   let css = "cursor:pointer;padding:6px 14px;border-radius:6px;" ++
             "border:1px solid #30363d;background:#21262d;" ++
             "color:#c9d1d9;font-size:14px;" ++ styleToCSS s
-  pure $ "<button" ++ controlIdentity "button" s eid ++ " type='button' aria-label='" ++ escapeHTML label ++ "'" ++ styleAttr css ++ " " ++
+  pure $ "<button" ++ controlIdentity "button" s eid ++ " type='button' aria-label='" ++ escapeHTML (controlName s label) ++ "'" ++ controlAttributes s (controlId "button" s eid) ++ styleAttr css ++ " " ++
          "data-iris-click='" ++ show eid ++ "'>" ++
-         escapeHTML label ++ "</button>"
+         escapeHTML label ++ "</button>" ++ controlDetails s (controlId "button" s eid)
 
 renderHTML (WCheckbox s checked msg) st idMap _ = do
   eid <- nextId st
-  modifyIORef idMap ((eid, msg) ::)
+  when (not s.control.disabled) (modifyIORef idMap ((eid, msg) ::))
   let chk = if checked then " checked" else ""
       css = "display:flex;align-items:center;gap:8px;cursor:pointer;" ++
             styleToCSS s
-  let accessibleName = case s.label of Nothing => "Toggle"; Just label => label
+  let accessibleName = controlName s "Toggle"
   pure $ "<label" ++ styleAttr css ++ ">" ++
-         "<input" ++ controlIdentity "checkbox" s eid ++ " type='checkbox' aria-label='" ++ escapeHTML accessibleName ++ "'" ++ chk ++
+         "<input" ++ controlIdentity "checkbox" s eid ++ " type='checkbox' aria-label='" ++ escapeHTML accessibleName ++ "'" ++ controlAttributes s (controlId "checkbox" s eid) ++ chk ++
          " data-iris-click='" ++ show eid ++ "'/>" ++
-         "</label>"
+         "</label>" ++ controlDetails s (controlId "checkbox" s eid)
 
 renderHTML (WInput s val onChange) st _ inputMap = do
   eid <- nextId st
-  modifyIORef inputMap ((eid, onChange) ::)
+  when (not s.control.disabled && not s.control.readOnly)
+    (modifyIORef inputMap ((eid, onChange) ::))
   let css = "background:#0d1117;border:1px solid #30363d;border-radius:4px;" ++
             "padding:8px 12px;color:#c9d1d9;font-family:inherit;width:100%;" ++
             "font-size:14px;caret-color:#58a6ff;" ++ styleToCSS s
@@ -263,10 +258,12 @@ renderHTML (WInput s val onChange) st _ inputMap = do
   -- same `oninput` this field already wires - indistinguishable from
   -- real typing to `onChange`. Seen firsthand mid-testing: an unrelated
   -- autofill suggestion got submitted as a real todo.
-  let accessibleName = case s.label of Nothing => "Text input"; Just label => label
-  pure $ "<input type='" ++ (if s.secret then "password" else "text") ++ "' aria-label='" ++ escapeHTML accessibleName ++ "'" ++ controlIdentity "input" s eid ++ " autocomplete='off'" ++ styleAttr css ++ " " ++
+  let accessibleName = controlName s "Text input"
+  pure $ "<input type='" ++ (if s.secret then "password" else "text") ++ "' aria-label='" ++ escapeHTML accessibleName ++ "'" ++ controlIdentity "input" s eid ++
+         controlAttributes s (controlId "input" s eid) ++
+         (if s.control.readOnly then " readonly" else "") ++ " autocomplete='off'" ++ styleAttr css ++ " " ++
          "value='" ++ escapeHTML val ++ "' " ++
-         "data-iris-input='" ++ show eid ++ "'/>"
+         "data-iris-input='" ++ show eid ++ "'/>" ++ controlDetails s (controlId "input" s eid)
 
 renderHTML (WProgress s frac) _ _ _ =
   pure (renderProgress frac)
@@ -366,6 +363,8 @@ irisCSS = """
   .iris-spinner { font-family: monospace; }
   input[type='checkbox'] { accent-color: var(--iris-accent); width: 16px; height: 16px; }
   button:hover { background: #30363d !important; }
+  button:disabled, input:disabled { opacity:0.55; cursor:not-allowed; }
+  .iris-control-error { color:#ff7b72; }
   button:focus-visible, input:focus-visible {
     outline: 3px solid var(--iris-accent);
     outline-offset: 2px;
