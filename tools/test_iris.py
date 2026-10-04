@@ -377,6 +377,29 @@ class NewCliDefaultTargetsTests(unittest.TestCase):
                 mobile.main(['new', 'greeter', '--target', 'mobile'])
         self.assertFalse((self.root / 'greeter').exists())
 
+    def test_new_from_inside_a_same_named_project_refuses_instead_of_nesting(self):
+        # Regression: running `new <name>` while already standing inside a
+        # project named <name> used to silently create <name>/<name>/
+        # (Path.cwd() / name resolved to a path that didn't exist yet, so
+        # the "already exists" guard never fired).
+        project = self.root / 'greeter'; project.mkdir()
+        (project / 'pack.toml').write_text('[custom.all.iris]\n')
+        with patch.object(mobile.Path, 'cwd', return_value=project):
+            with self.assertRaises(SystemExit):
+                mobile.main(['new', 'greeter'])
+        self.assertFalse((project / 'greeter').exists())
+
+    def test_explicit_project_overrides_the_same_name_guard(self):
+        # --project is an explicit, deliberate override - the guard above
+        # only applies when --project was left to its cwd-based default.
+        project = self.root / 'greeter'; project.mkdir()
+        (project / 'pack.toml').write_text('[custom.all.iris]\n')
+        elsewhere = self.root / 'elsewhere'
+        with patch.object(mobile.Path, 'cwd', return_value=project):
+            with patch.object(mobile, 'default_capacitor', return_value=None):
+                mobile.main(['new', 'greeter', '--project', str(elsewhere)])
+        self.assertTrue((elsewhere / 'pack.toml').is_file())
+
 
 class AddTargetsTests(unittest.TestCase):
     def setUp(self):

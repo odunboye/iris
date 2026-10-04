@@ -609,6 +609,11 @@ def main(argv=None):
         return
     if args.command in ['new', 'add']:
         try:
+            if args.command == 'new' and args.project is None and Path.cwd().name == args.name \
+                    and (Path.cwd() / 'pack.toml').is_file():
+                raise ValueError(f"You're already inside a project named '{args.name}' (found pack.toml "
+                                  f'here) - this would create a nested {args.name}/{args.name}/. '
+                                  'Use ./iris add <target> to add to this project instead.')
             capacitor = args.capacitor or remembered_capacitor()
             if args.command == 'new':
                 project = args.project or (Path.cwd() / args.name)

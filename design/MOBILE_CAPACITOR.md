@@ -81,7 +81,10 @@ nothing - a starter model module (a trivial counter exporting `app : UIApp
 Nat Msg`), `pack.toml` (pinning `iris` as a git dependency at this checkout's
 current commit), and, with no `--target` given, both the `web` and `mobile`
 targets (each with its entry module, ipkg and HTML/config shell). It refuses
-to run if `<name>` already exists.
+to run if `<name>` already exists - including when you're standing inside it
+(running `new <name>` again from inside the project it created, instead of
+`add`, refuses with a clear error rather than silently creating a nested
+`<name>/<name>/`).
 
 ```sh
 ./iris new greeter                          # web + mobile by default
