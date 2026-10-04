@@ -371,9 +371,19 @@ def new_write(path, text, force):
     print('Wrote ' + str(path))
 
 
+def default_app_id(name):
+    segment = re.sub(r'[^a-z0-9]', '', name.lower())
+    if not segment or not segment[0].isalpha():
+        segment = 'app' + segment
+    return f'com.example.{segment}'
+
+
 def new_target(project, target, module, app_value, name, force, capacitor=None, app_id=None, app_name=None):
-    if target == 'mobile' and (capacitor is None or app_id is None):
-        raise ValueError('--target mobile requires --capacitor and --app-id')
+    if target == 'mobile' and capacitor is None:
+        raise ValueError('--target mobile requires --capacitor')
+    if target == 'mobile' and app_id is None:
+        app_id = default_app_id(name)
+        print(f"No --app-id given - defaulting to '{app_id}'; change it before a real release.")
     project = project.resolve(strict=True)
     sourcedir = next((d for d in ['.', 'src'] if (project / d / (module + '.idr')).is_file()), None)
     if sourcedir is None:
@@ -562,7 +572,8 @@ def main(argv=None):
     newer.add_argument('--capacitor', type=Path, help='capacitor checkout; enables the mobile target '
                                                        '(default: remembered from the last ./iris setup, '
                                                        'or cloned automatically)')
-    newer.add_argument('--app-id', help='reverse-domain app id; enables the mobile target')
+    newer.add_argument('--app-id', help='reverse-domain app id for the mobile target '
+                                        '(default: com.example.<name>; change it before a real release)')
     newer.add_argument('--app-name', help='human-readable app name; defaults to <name>')
     adder = commands.add_parser('add', help='add a target to the project in the current directory')
     adder.add_argument('target', nargs='+', choices=sorted(NEW_TARGETS))
@@ -572,7 +583,9 @@ def main(argv=None):
     adder.add_argument('--capacitor', type=Path, help='capacitor checkout; required for the mobile target '
                                                        '(default: remembered from the last ./iris setup, '
                                                        'or cloned automatically)')
-    adder.add_argument('--app-id', help='reverse-domain app id; required for the mobile target')
+    adder.add_argument('--app-id', help='reverse-domain app id for the mobile target '
+                                        '(default: com.example.<current directory name>; change it '
+                                        'before a real release)')
     adder.add_argument('--app-name', help='human-readable app name; defaults to the current directory name')
     adder.add_argument('--force', action='store_true', help='overwrite existing generated files')
     for name, help in [('setup', 'install locked npm dependencies for the library and this tooling'),

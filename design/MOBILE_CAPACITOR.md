@@ -87,8 +87,11 @@ module, ipkg and HTML shell. It refuses to run if `<name>` already exists.
 ```sh
 ./iris new greeter                             # web, starter module
 ./iris new greeter --target terminal canvas     # multiple targets at once
-./iris new greeter --app-id com.example.greeter # web + mobile, if a capacitor
-                                                 # checkout is known (see below)
+./iris new greeter --app-id com.example.greeter # web + mobile (an --app-id is
+                                                 # what signals wanting mobile
+                                                 # by default here, though it's
+                                                 # not otherwise required - see
+                                                 # below)
 ```
 
 `./iris add <target> [<target> ...]` adds a target to the project in the
@@ -99,7 +102,7 @@ and its `[custom.all.<name>-<target>]` entry, where `<name>` is the current
 directory's name:
 
 ```sh
-cd greeter && ./iris add mobile --app-id com.example.greeter
+cd greeter && ./iris add mobile   # --app-id optional here too; see below
 ```
 
 Both commands' `--module` (default: `<Name>`, the project/current directory
@@ -108,8 +111,12 @@ expects the module to already exist, matching whatever `new` generated or
 you wrote by hand. The `terminal` target's `prebuild` embeds this checkout's
 own `c/iristui.c` by absolute path - that native source isn't resolvable
 through Pack's dependency cache, unlike the pure-Idris targets. The `mobile`
-target also writes `iris.mobile.json` (`--app-id` required; `--app-name`
-defaults to the project name) and warns if `pack.toml` doesn't register every
+target also writes `iris.mobile.json`. `--app-id` defaults to
+`com.example.<name>` (non-alphanumeric characters stripped, a leading
+`app` added if what's left wouldn't start with a letter) when not given -
+printed so it isn't missed, and meant to be changed before a real release,
+not shipped as-is. `--app-name` defaults to the project name. `new`/`add`
+warn if `pack.toml` doesn't register every
 dependency - including `iris` itself - as `type = "local"`, since `./iris
 compile`/`build` require that (see Architecture above); a freshly created
 project's `pack.toml` never satisfies this on its own, since `iris` is pinned

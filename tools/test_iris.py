@@ -261,11 +261,22 @@ class NewScaffoldTests(unittest.TestCase):
         css = (self.project / 'canvas.css').read_text()
         self.assertIn('#iris-canvas', css)
 
-    def test_mobile_target_requires_capacitor_and_app_id_before_writing_anything(self):
-        with self.assertRaisesRegex(ValueError, 'requires --capacitor and --app-id'):
+    def test_mobile_target_requires_capacitor_before_writing_anything(self):
+        with self.assertRaisesRegex(ValueError, 'requires --capacitor'):
             mobile.new_target(self.project, 'mobile', 'Demo', 'app', 'demo', force=False)
         self.assertEqual(list(self.project.glob('*.ipkg')), [])
         self.assertFalse((self.project / 'src/MainMobile.idr').exists())
+
+    def test_mobile_target_defaults_app_id_without_requiring_it(self):
+        capacitor = self.project / 'capacitor'; capacitor.mkdir()
+        mobile.new_target(self.project, 'mobile', 'Demo', 'app', 'demo', force=False, capacitor=capacitor)
+        cfg = json.loads((self.project / 'iris.mobile.json').read_text())
+        self.assertEqual(cfg['appId'], 'com.example.demo')
+
+    def test_default_app_id_handles_unfriendly_names(self):
+        self.assertEqual(mobile.default_app_id('my-app'), 'com.example.myapp')
+        self.assertEqual(mobile.default_app_id('3d-viewer'), 'com.example.app3dviewer')
+        self.assertEqual(mobile.default_app_id('Greeter'), 'com.example.greeter')
 
     def test_mobile_target_writes_config_matching_documented_schema(self):
         capacitor = self.project / 'capacitor'
