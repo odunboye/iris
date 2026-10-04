@@ -18,7 +18,7 @@ Application
 
 No second native bridge or new renderer is introduced. The packaged
 application's own server (if any) remains independent of Capacitor. The
-existing DOM UI and CSS are packaged as local assets; native plugins are
+application's browser program and CSS are packaged as local assets; native plugins are
 bundled before the compiled application. There is no remote `server.url`,
 storage snapshot, watcher injection or automatic RPC replay.
 
@@ -100,9 +100,9 @@ such fallback and fails loudly instead, since you asked for it specifically.
 
 `./iris add <target> [<target> ...]` adds a target to the project in the
 **current directory** - run it from inside a project `new` already created.
-It never creates a project or touches the existing module, `pack.toml`, or
-any previously generated target; it only appends the new target's own files
-and its `[custom.all.<name>-<target>]` entry, where `<name>` is the current
+It never creates a project or changes the existing application module or
+previously generated targets. It writes the new target's files and appends its
+`[custom.all.<name>-<target>]` entry to `pack.toml`, where `<name>` is the current
 directory's name:
 
 ```sh
@@ -122,7 +122,7 @@ printed so it isn't missed, and meant to be changed before a real release,
 not shipped as-is. `--app-name` defaults to the project name. `new`/`add`
 warn if `pack.toml` doesn't register every
 dependency - including `iris` itself - as `type = "local"`, since `./iris
-compile`/`build` require that (see Architecture above); a freshly created
+compile` requires that (see Architecture above); a freshly created
 project's `pack.toml` never satisfies this on its own, since `iris` is pinned
 as a git dependency there. `add` refuses to overwrite an existing target's
 files unless `--force` is passed; `new` never needs `--force`, since it
@@ -166,8 +166,8 @@ mobile was asked for by name.
 
 Setup is explicit and runs locked npm installs for the library and this
 tooling, without package lifecycle scripts; it (and `check`) also remember
-the given `--capacitor` path for `new`/`add`, as described above. No other
-command installs mobile dependencies. Compile only builds the selected UI
+the given `--capacitor` path for `new`/`add`, as described above. `new`/`add` also perform setup when obtaining the cached library automatically;
+`sync` installs the native host's locked dependencies. Compile only builds the selected UI
 target; run the
 application's own schema generation/server checks separately as needed.
 Build only packages assets; it does not install an app or start a database.
@@ -177,7 +177,7 @@ install there. Open/run first sync, then delegate to the pinned local Capacitor
 CLI. Native SDK/network/build effects are not transactional or rolled back by an
 asset rollback. Projects and outputs are retained for inspection.
 
-The preview tooling supports macOS/Linux, Node 22+, npm and Pack. iOS requires
+The preview tooling supports macOS/Linux, Python 3.11+, Node 22+, npm and Pack. iOS requires
 macOS/Xcode; Android requires its SDK and a compatible JDK (JDK 21 was validated).
 Signing, deployment targets, permissions, privacy manifests, release identities
 and store submission are application responsibilities.

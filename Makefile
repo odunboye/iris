@@ -1,4 +1,4 @@
-.PHONY: counter-check build test browser-test check release-check native-check clean
+.PHONY: counter-check build test browser-test check release-check native-check docs-check docs-test clean
 
 build:
 	idris2 --build iris.ipkg
@@ -40,11 +40,19 @@ counter-check:
 	node --check examples/counter/build/exec/counter-web
 	node --check examples/counter/build/exec/counter-canvas
 
+docs-check:
+	PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-docs.py
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p test_check_docs.py
+
+docs-test: docs-check
+	PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-docs.py
+
 check: test counter-check
 	cd tests && idris2 --cg node -p iris PublicAPITest.idr -o public-api-node
 	node ./tests/build/exec/public-api-node
 	$(MAKE) -C examples/todo check
 	./scripts/validate-release.sh
+	$(MAKE) docs-test
 
 release-check:
 	$(MAKE) -C examples/todo check
