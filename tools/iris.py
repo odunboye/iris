@@ -84,6 +84,31 @@ def remembered_capacitor():
     return None
 
 
+CAPACITOR_URL = 'https://github.com/odunboye/capacitor.git'
+
+
+def default_capacitor_cache():
+    base = Path(os.environ.get('XDG_CACHE_HOME') or (Path.home() / '.cache'))
+    return base / 'iris/capacitor'
+
+
+def default_capacitor():
+    # pack's own git-dependency cache only fetches what Idris compilation needs
+    # (the ipkg manifest and modules it imports), not a full raw checkout - no
+    # good for running npm against or reading native/JS plugin files. Clone and
+    # set this up for real instead, the same way ./iris setup --capacitor would.
+    cache = default_capacitor_cache()
+    if not cache.is_dir():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(['git', 'clone', '--depth', '1', CAPACITOR_URL, str(cache)], check=True)
+        print(f'Cloned {CAPACITOR_URL} to {cache}')
+    cap = library(cache)
+    run(['npm', 'ci', '--ignore-scripts'], cap)
+    run(['npm', 'ci', '--ignore-scripts'], TOOLING)
+    remember_capacitor(cap)
+    return cap
+
+
 def library(path):
     path = Path(path).resolve(strict=True)
     package = read_json(path / 'package.json')
@@ -535,7 +560,8 @@ def main(argv=None):
                                         '(default: <Name>)')
     newer.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
     newer.add_argument('--capacitor', type=Path, help='capacitor checkout; enables the mobile target '
-                                                       '(default: remembered from the last ./iris setup)')
+                                                       '(default: remembered from the last ./iris setup, '
+                                                       'or cloned automatically)')
     newer.add_argument('--app-id', help='reverse-domain app id; enables the mobile target')
     newer.add_argument('--app-name', help='human-readable app name; defaults to <name>')
     adder = commands.add_parser('add', help='add a target to the project in the current directory')
@@ -544,7 +570,8 @@ def main(argv=None):
                                         '(default: the current directory name, capitalized)')
     adder.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
     adder.add_argument('--capacitor', type=Path, help='capacitor checkout; required for the mobile target '
-                                                       '(default: remembered from the last ./iris setup)')
+                                                       '(default: remembered from the last ./iris setup, '
+                                                       'or cloned automatically)')
     adder.add_argument('--app-id', help='reverse-domain app id; required for the mobile target')
     adder.add_argument('--app-name', help='human-readable app name; defaults to the current directory name')
     adder.add_argument('--force', action='store_true', help='overwrite existing generated files')
@@ -569,7 +596,11 @@ def main(argv=None):
         return
     if args.command in ['new', 'add']:
         try:
+            requested = args.target or []
+            wants_mobile = 'mobile' in requested or (args.command == 'new' and not args.target and args.app_id)
             capacitor = args.capacitor or remembered_capacitor()
+            if capacitor is None and wants_mobile:
+                capacitor = default_capacitor()
             if args.command == 'new':
                 project = args.project or (Path.cwd() / args.name)
                 module = args.module or (args.name[0].upper() + args.name[1:])

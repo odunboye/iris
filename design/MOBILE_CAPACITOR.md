@@ -117,13 +117,22 @@ as a git dependency there. `add` refuses to overwrite an existing target's
 files unless `--force` is passed; `new` never needs `--force`, since it
 always starts from nothing.
 
-Neither command requires `--capacitor` to be typed out each time: `./iris
-setup --capacitor PATH` (below) remembers the resolved path for this user
-(`$XDG_CONFIG_HOME/iris/capacitor-path`, or `~/.config/iris/capacitor-path`),
-and both `new`/`add` read it automatically - pass `--capacitor` only to use a
-different checkout than the remembered one. `new`'s default target list
-becomes `web mobile` precisely when an `--app-id` is given and a capacitor
-checkout is available (explicit or remembered); otherwise it stays `web`.
+Neither command needs `--capacitor` at all, let alone typed out each time.
+Resolution order, cheapest first: an explicit `--capacitor`; the path
+remembered from the last `./iris setup --capacitor PATH` (below)
+(`$XDG_CONFIG_HOME/iris/capacitor-path`, or `~/.config/iris/capacitor-path`);
+failing both, `new`/`add` clone [odunboye/capacitor](https://github.com/odunboye/capacitor)
+into `$XDG_CACHE_HOME/iris/capacitor` (or `~/.cache/iris/capacitor`), run its
+locked npm install and this tooling's own, and remember that path for next
+time - the same setup `./iris setup` does by hand, done automatically the
+first time a target actually needs it. This only ever happens once per
+machine; every call after the first hits the remembered path directly. Pack's
+own git-dependency cache can't stand in for this: it only fetches what Idris
+compilation needs (the `.ipkg` and the modules actually imported), not the
+full checkout `npm ci`/the native plugin files require. `new`'s default
+target list becomes `web mobile` precisely when `--app-id` is given (a
+capacitor checkout, explicit, remembered, or freshly cloned, becomes
+available in that case); otherwise it stays `web`.
 
 ## Commands
 

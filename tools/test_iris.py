@@ -387,5 +387,47 @@ class CapacitorConfigTests(unittest.TestCase):
         self.assertEqual(mobile.remembered_capacitor(), target)
 
 
+class DefaultCapacitorTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name).resolve()
+        self.env_patch = patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.home / 'config'),
+                                                  'XDG_CACHE_HOME': str(self.home / 'cache')})
+        self.env_patch.start()
+        self.addCleanup(self.env_patch.stop)
+
+        def fake_clone(args, **kwargs):
+            cache = Path(args[-1])
+            (cache / 'js').mkdir(parents=True)
+            (cache / 'node_modules/@capacitor/core').mkdir(parents=True)
+            (cache / 'package.json').write_text('{"version":"0.3.0"}')
+            (cache / 'js/register.mjs').write_text('export const fixture = true;')
+            return unittest.mock.Mock(returncode=0)
+
+        self.clone_patch = patch.object(mobile.subprocess, 'run', side_effect=fake_clone)
+        self.clone_patch.start()
+        self.addCleanup(self.clone_patch.stop)
+        self.run_patch = patch.object(mobile, 'run')
+        self.run_patch.start()
+        self.addCleanup(self.run_patch.stop)
+
+    def test_clones_npm_installs_and_remembers_on_first_call(self):
+        cache = self.home / 'cache/iris/capacitor'
+        cap = mobile.default_capacitor()
+        self.assertEqual(cap, cache)
+        mobile.subprocess.run.assert_called_once()
+        self.assertIn(mobile.CAPACITOR_URL, mobile.subprocess.run.call_args[0][0])
+        self.assertEqual(mobile.run.call_count, 2)
+        self.assertEqual(mobile.remembered_capacitor(), cache)
+
+    def test_second_call_reuses_the_cache_without_cloning_again(self):
+        mobile.default_capacitor()
+        mobile.subprocess.run.reset_mock()
+        mobile.run.reset_mock()
+        mobile.default_capacitor()
+        mobile.subprocess.run.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

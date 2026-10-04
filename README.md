@@ -142,9 +142,10 @@ here from Flux's `flux mobile ...`, since it has no dependency on Flux's
 server):
 
 ```bash
-./iris new myapp                   # start a new project (web target)
-cd myapp && ./iris add terminal canvas   # ...or add more targets, any time
-./iris setup --capacitor /path/to/capacitor   # remembered for later new/add calls
+./iris new myapp                           # start a new project (web target)
+cd myapp && ./iris add mobile --app-id com.example.myapp
+                                            # ...or add more targets, any time -
+                                            # capacitor is cloned/remembered automatically
 ./iris build --project /path/to/app
 ./iris sync ios --project /path/to/app
 ./iris install-cli   # install this launcher onto PATH
