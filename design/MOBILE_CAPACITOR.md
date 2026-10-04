@@ -78,46 +78,52 @@ refused once a host exists; migration requires deliberate host management.
 ## Starting a project
 
 `./iris new <name>` is a project starter, the same shape as `pack new bin
-<name>`: run from the intended parent directory with no project yet at
-`./<name>`, it creates one from nothing - a starter model module (a trivial
-counter exporting `app : UIApp Nat Msg`), `pack.toml` (pinning `iris` as a
-git dependency at this checkout's current commit), and one backend target
-(`web` by default) with its entry module, ipkg and HTML shell.
+<name>`: run from the intended parent directory, it creates `./<name>/` from
+nothing - a starter model module (a trivial counter exporting `app : UIApp
+Nat Msg`), `pack.toml` (pinning `iris` as a git dependency at this checkout's
+current commit), and one backend target (`web` by default) with its entry
+module, ipkg and HTML shell. It refuses to run if `<name>` already exists.
 
 ```sh
-./iris new greeter                                              # web, starter module
-./iris new greeter --target terminal canvas                     # multiple targets at once
-./iris new greeter --capacitor /path/to/capacitor --app-id com.example.greeter
-                                                                  # web + mobile (both need
-                                                                  # --capacitor/--app-id to
-                                                                  # be included by default)
+./iris new greeter                             # web, starter module
+./iris new greeter --target terminal canvas     # multiple targets at once
+./iris new greeter --app-id com.example.greeter # web + mobile, if a capacitor
+                                                 # checkout is known (see below)
 ```
 
-Run again from inside (or naming) an existing project to add another target
-without touching what's already there - the starter module, `pack.toml` and
-any previously generated target are left alone, and the new target's own
-`[custom.all.<name>-<target>]` entry is appended:
+`./iris add <target> [<target> ...]` adds a target to the project in the
+**current directory** - run it from inside a project `new` already created.
+It never creates a project or touches the existing module, `pack.toml`, or
+any previously generated target; it only appends the new target's own files
+and its `[custom.all.<name>-<target>]` entry, where `<name>` is the current
+directory's name:
 
 ```sh
-cd greeter && ./iris new greeter --target mobile --capacitor /path/to/capacitor --app-id com.example.greeter
+cd greeter && ./iris add mobile --app-id com.example.greeter
 ```
 
-`--module` (default: `<Name>`, the project name capitalized) only matters
-once - if that file already exists, `new` scaffolds around it instead of
-generating a starter, so a hand-written model module works the same as a
-generated one on every later `--target` run. `--name` is positional and
-always required; it names the directory (when creating fresh), the default
-module, and the package/executable base name (`<name>-web`,
-`<name>-terminal`, ...). The `terminal` target's `prebuild` embeds this
-checkout's own `c/iristui.c` by absolute path - that native source isn't
-resolvable through Pack's dependency cache, unlike the pure-Idris targets.
-The `mobile` target also writes `iris.mobile.json` (`--app-id` required;
-`--app-name` defaults to `<name>`) and warns if `pack.toml` doesn't register
-every dependency - including `iris` itself - as `type = "local"`, since
-`./iris compile`/`build` require that (see Architecture above); a freshly
-created project's `pack.toml` never satisfies this on its own, since `iris`
-is pinned as a git dependency there. Existing files are left untouched
-unless `--force` is passed.
+Both commands' `--module` (default: `<Name>`, the project/current directory
+name capitalized) only matters for `new`'s starter generation; `add` always
+expects the module to already exist, matching whatever `new` generated or
+you wrote by hand. The `terminal` target's `prebuild` embeds this checkout's
+own `c/iristui.c` by absolute path - that native source isn't resolvable
+through Pack's dependency cache, unlike the pure-Idris targets. The `mobile`
+target also writes `iris.mobile.json` (`--app-id` required; `--app-name`
+defaults to the project name) and warns if `pack.toml` doesn't register every
+dependency - including `iris` itself - as `type = "local"`, since `./iris
+compile`/`build` require that (see Architecture above); a freshly created
+project's `pack.toml` never satisfies this on its own, since `iris` is pinned
+as a git dependency there. `add` refuses to overwrite an existing target's
+files unless `--force` is passed; `new` never needs `--force`, since it
+always starts from nothing.
+
+Neither command requires `--capacitor` to be typed out each time: `./iris
+setup --capacitor PATH` (below) remembers the resolved path for this user
+(`$XDG_CONFIG_HOME/iris/capacitor-path`, or `~/.config/iris/capacitor-path`),
+and both `new`/`add` read it automatically - pass `--capacitor` only to use a
+different checkout than the remembered one. `new`'s default target list
+becomes `web mobile` precisely when an `--app-id` is given and a capacitor
+checkout is available (explicit or remembered); otherwise it stays `web`.
 
 ## Commands
 
@@ -136,8 +142,10 @@ unless `--force` is passed.
 ```
 
 Setup is explicit and runs locked npm installs for the library and this
-tooling, without package lifecycle scripts. No other command installs mobile
-dependencies. Compile only builds the selected UI target; run the
+tooling, without package lifecycle scripts; it (and `check`) also remember
+the given `--capacitor` path for `new`/`add`, as described above. No other
+command installs mobile dependencies. Compile only builds the selected UI
+target; run the
 application's own schema generation/server checks separately as needed.
 Build only packages assets; it does not install an app or start a database.
 

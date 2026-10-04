@@ -7,6 +7,7 @@ import argparse
 import contextlib
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shlex
@@ -61,6 +62,26 @@ def inside(root, relative):
     if not resolved.is_relative_to(root.resolve()) or resolved == root.resolve():
         raise ValueError('Path escapes its owner: ' + relative)
     return candidate
+
+
+def capacitor_config_path():
+    base = Path(os.environ.get('XDG_CONFIG_HOME') or (Path.home() / '.config'))
+    return base / 'iris/capacitor-path'
+
+
+def remember_capacitor(path):
+    config = capacitor_config_path()
+    config.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write(config, (str(Path(path).expanduser().resolve()) + '\n').encode())
+
+
+def remembered_capacitor():
+    config = capacitor_config_path()
+    if config.is_file():
+        text = config.read_text().strip()
+        if text:
+            return Path(text)
+    return None
 
 
 def library(path):
@@ -332,7 +353,7 @@ def new_target(project, target, module, app_value, name, force, capacitor=None, 
     sourcedir = next((d for d in ['.', 'src'] if (project / d / (module + '.idr')).is_file()), None)
     if sourcedir is None:
         raise ValueError(f'No {module}.idr in {project} or {project}/src - extract your model/update/view '
-                          f'into a module exporting `{app_value} : UIApp model msg` first, then run ./iris new again.')
+                          f'into a module exporting `{app_value} : UIApp model msg` first, then try again.')
     entry_module, runner_import, runner_call = NEW_TARGETS[target]
     new_write(project / sourcedir / (entry_module + '.idr'),
               f'module {entry_module}\n\nimport {module}\nimport {runner_import}\n\n'
@@ -418,37 +439,52 @@ def git_iris_origin():
     return git('remote', 'get-url', 'origin'), git('rev-parse', 'HEAD')
 
 
-def new_default_project(name):
-    # Run from a project's own directory (re-scaffolding an extra target): use it as-is.
-    # Otherwise (a fresh project, run from its intended parent directory): create <name>/.
-    cwd = Path.cwd()
-    if cwd.name == name and (cwd / 'pack.toml').is_file():
-        return cwd
-    return cwd / name
+def register_target(pack_toml, name, target):
+    section = f'[custom.all.{name}-{target}]'
+    text = pack_toml.read_text()
+    if section not in text:
+        pack_toml.write_text(text.rstrip('\n') + f'\n\n{section}\ntype = "local"\npath = "."\nipkg = "{target}.ipkg"\n')
+        print(f'Registered {name}-{target} in pack.toml')
 
 
-def new_project(project, name, targets, module, app_value, force, capacitor=None, app_id=None, app_name=None):
+def build_hint(name, targets):
+    print(f"'{name}' is ready. Next: pack --no-prompt install iris && "
+          + ' && '.join(f'pack --no-prompt{" --cg javascript" if t != "terminal" else ""} build {t}.ipkg' for t in targets))
+
+
+def new_project(project, name, targets, module, app_value, capacitor=None, app_id=None, app_name=None):
     project = Path(project).expanduser().resolve()
-    project.mkdir(parents=True, exist_ok=True)
-    if not any((project / d / (module + '.idr')).is_file() for d in ['.', 'src']):
-        (project / 'src').mkdir(exist_ok=True)
-        module_file = project / 'src' / (module + '.idr')
-        new_write(module_file, STARTER_MODULE.format(module=module, app_value=app_value), force=False)
-        print(f'Starter module - edit {module_file} to build your actual app.')
+    if project.exists():
+        raise ValueError(f'{project} already exists - use ./iris add from inside it to add a target, '
+                          'or remove it first.')
+    project.mkdir(parents=True)
+    (project / 'src').mkdir()
+    module_file = project / 'src' / (module + '.idr')
+    new_write(module_file, STARTER_MODULE.format(module=module, app_value=app_value), force=False)
+    print(f'Starter module - edit {module_file} to build your actual app.')
+    url, commit = git_iris_origin()
+    pack_toml = project / 'pack.toml'
+    new_write(pack_toml, f'[custom.all.iris]\ntype = "git"\nurl = "{url}"\ncommit = "{commit}"\nipkg = "iris.ipkg"\n',
+              force=False)
+    for target in targets:
+        new_target(project, target, module, app_value, name, force=False,
+                  capacitor=capacitor, app_id=app_id, app_name=app_name)
+        register_target(pack_toml, name, target)
+    build_hint(name, targets)
+
+
+def add_targets(targets, module, app_value, force, capacitor=None, app_id=None, app_name=None):
+    project = Path.cwd()
     pack_toml = project / 'pack.toml'
     if not pack_toml.is_file():
-        url, commit = git_iris_origin()
-        new_write(pack_toml, f'[custom.all.iris]\ntype = "git"\nurl = "{url}"\ncommit = "{commit}"\nipkg = "iris.ipkg"\n',
-                  force=False)
+        raise ValueError(f'No pack.toml in {project} - this is not an iris project; '
+                          'run ./iris new <name> first.')
+    name = project.name
     for target in targets:
-        new_target(project, target, module, app_value, name, force, capacitor, app_id, app_name)
-        section = f'[custom.all.{name}-{target}]'
-        text = pack_toml.read_text()
-        if section not in text:
-            pack_toml.write_text(text.rstrip('\n') + f'\n\n{section}\ntype = "local"\npath = "."\nipkg = "{target}.ipkg"\n')
-            print(f'Registered {name}-{target} in pack.toml')
-    print(f"Created '{name}' in {project}. Next: pack --no-prompt install iris && "
-          + ' && '.join(f'pack --no-prompt{" --cg javascript" if t != "terminal" else ""} build {t}.ipkg' for t in targets))
+        new_target(project, target, module, app_value, name, force,
+                  capacitor=capacitor, app_id=app_id, app_name=app_name)
+        register_target(pack_toml, name, target)
+    build_hint(name, targets)
 
 
 def install_cli(directory, force=False):
@@ -489,18 +525,29 @@ def main(argv=None):
     installer = commands.add_parser('install-cli', help='install this launcher onto PATH')
     installer.add_argument('--bin-dir', default='~/.local/bin')
     installer.add_argument('--force', action='store_true')
-    newer = commands.add_parser('new', help='create a new project, or add a target to an existing one')
-    newer.add_argument('name', help='project directory name (if new) and package/executable base name')
+    newer = commands.add_parser('new', help='create a new project from nothing (like `pack new bin`)')
+    newer.add_argument('name', help='project directory name and package/executable base name')
     newer.add_argument('--target', nargs='+', choices=sorted(NEW_TARGETS), default=None,
-                       help='targets to scaffold (default: web, plus mobile if --capacitor/--app-id are given)')
+                       help='targets to scaffold (default: web, plus mobile if a capacitor checkout and '
+                            '--app-id are available)')
     newer.add_argument('--project', type=Path, help="project directory (default: ./<name>)")
-    newer.add_argument('--module', help='shared module exporting `app_value : UIApp model msg` (default: <Name>, '
-                                        'generated as a starter counter if it does not already exist)')
+    newer.add_argument('--module', help='shared module to generate, exporting `app_value : UIApp model msg` '
+                                        '(default: <Name>)')
     newer.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
-    newer.add_argument('--capacitor', type=Path, help='capacitor checkout; enables the mobile target')
+    newer.add_argument('--capacitor', type=Path, help='capacitor checkout; enables the mobile target '
+                                                       '(default: remembered from the last ./iris setup)')
     newer.add_argument('--app-id', help='reverse-domain app id; enables the mobile target')
     newer.add_argument('--app-name', help='human-readable app name; defaults to <name>')
-    newer.add_argument('--force', action='store_true', help='overwrite existing generated files')
+    adder = commands.add_parser('add', help='add a target to the project in the current directory')
+    adder.add_argument('target', nargs='+', choices=sorted(NEW_TARGETS))
+    adder.add_argument('--module', help='shared module exporting `app_value : UIApp model msg` '
+                                        '(default: the current directory name, capitalized)')
+    adder.add_argument('--app-value', default='app', help='name of the exported UIApp value in --module (default: app)')
+    adder.add_argument('--capacitor', type=Path, help='capacitor checkout; required for the mobile target '
+                                                       '(default: remembered from the last ./iris setup)')
+    adder.add_argument('--app-id', help='reverse-domain app id; required for the mobile target')
+    adder.add_argument('--app-name', help='human-readable app name; defaults to the current directory name')
+    adder.add_argument('--force', action='store_true', help='overwrite existing generated files')
     for name, help in [('setup', 'install locked npm dependencies for the library and this tooling'),
                         ('check', 'build and run the compiled Idris adapter test against the hardened bridge'),
                         ('compile', 'build the selected UI target only'),
@@ -520,19 +567,26 @@ def main(argv=None):
     if args.command == 'install-cli':
         install_cli(args.bin_dir, args.force)
         return
-    if args.command == 'new':
+    if args.command in ['new', 'add']:
         try:
-            project = args.project or new_default_project(args.name)
-            module = args.module or (args.name[0].upper() + args.name[1:])
-            targets = args.target or (['web', 'mobile'] if args.capacitor and args.app_id else ['web'])
-            new_project(project, args.name, targets, module, args.app_value, args.force,
-                       args.capacitor, args.app_id, args.app_name)
+            capacitor = args.capacitor or remembered_capacitor()
+            if args.command == 'new':
+                project = args.project or (Path.cwd() / args.name)
+                module = args.module or (args.name[0].upper() + args.name[1:])
+                targets = args.target or (['web', 'mobile'] if capacitor and args.app_id else ['web'])
+                new_project(project, args.name, targets, module, args.app_value,
+                           capacitor, args.app_id, args.app_name)
+            else:
+                module = args.module or (Path.cwd().name[0].upper() + Path.cwd().name[1:])
+                add_targets(args.target, module, args.app_value, args.force,
+                           capacitor, args.app_id, args.app_name)
         except (OSError, ValueError, subprocess.SubprocessError) as error:
             parser.exit(1, str(error) + '\n')
         return
     try:
         if args.command in ['setup', 'check']:
             cap = library(args.capacitor)
+            remember_capacitor(cap)
             if args.command == 'check':
                 mobile_check.check(cap)
             else:

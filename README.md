@@ -142,17 +142,17 @@ here from Flux's `flux mobile ...`, since it has no dependency on Flux's
 server):
 
 ```bash
-./iris new myapp                                 # start a new project (web target)
-./iris new myapp --target terminal canvas         # ...or add more targets, any time
-./iris setup --capacitor /path/to/capacitor
+./iris new myapp                   # start a new project (web target)
+cd myapp && ./iris add terminal canvas   # ...or add more targets, any time
+./iris setup --capacitor /path/to/capacitor   # remembered for later new/add calls
 ./iris build --project /path/to/app
 ./iris sync ios --project /path/to/app
 ./iris install-cli   # install this launcher onto PATH
 ```
 
 See [`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) for
-`./iris new`'s full behavior, configuration, the full command reference, and
-ownership/publication mechanics.
+`./iris new`/`add`'s full behavior, configuration, the full command
+reference, and ownership/publication mechanics.
 
 ## Supported scope
 

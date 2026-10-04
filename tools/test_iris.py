@@ -301,7 +301,7 @@ class NewProjectTests(unittest.TestCase):
 
     def test_fresh_project_generates_starter_module_config_and_target(self):
         project = self.root / 'greeter'
-        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app')
         self.assertIn('export\napp : UIApp', (project / 'src/Greeter.idr').read_text())
         toml = (project / 'pack.toml').read_text()
         self.assertIn('url = "https://example.test/iris.git"', toml)
@@ -311,36 +311,80 @@ class NewProjectTests(unittest.TestCase):
         self.assertTrue((project / 'web.ipkg').is_file())
         self.assertTrue((project / 'index.html').is_file())
 
-    def test_rerun_with_existing_module_adds_target_without_touching_it(self):
+    def test_multiple_targets_in_one_call(self):
         project = self.root / 'greeter'
-        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
-        original = (project / 'src/Greeter.idr').read_text()
-        mobile.new_project(project, 'greeter', ['canvas'], 'Greeter', 'app', force=False)
-        self.assertEqual((project / 'src/Greeter.idr').read_text(), original)
+        mobile.new_project(project, 'greeter', ['web', 'terminal'], 'Greeter', 'app')
         toml = (project / 'pack.toml').read_text()
         self.assertIn('[custom.all.greeter-web]', toml)
+        self.assertIn('[custom.all.greeter-terminal]', toml)
+        self.assertTrue((project / 'web.ipkg').is_file())
+        self.assertTrue((project / 'terminal.ipkg').is_file())
+
+    def test_refuses_to_recreate_an_existing_project(self):
+        project = self.root / 'greeter'
+        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app')
+        with self.assertRaisesRegex(ValueError, 'already exists'):
+            mobile.new_project(project, 'greeter', ['canvas'], 'Greeter', 'app')
+        # The first run's files are untouched by the refused second call.
+        self.assertFalse((project / 'canvas.ipkg').exists())
+
+
+class AddTargetsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name).resolve()
+        self.origin_patch = patch.object(mobile, 'git_iris_origin', return_value=('https://example.test/iris.git', 'deadbeef'))
+        self.origin_patch.start()
+        self.addCleanup(self.origin_patch.stop)
+        self.project = self.root / 'greeter'
+        mobile.new_project(self.project, 'greeter', ['web'], 'Greeter', 'app')
+        self.cwd_patch = patch.object(mobile.Path, 'cwd', return_value=self.project)
+        self.cwd_patch.start()
+        self.addCleanup(self.cwd_patch.stop)
+
+    def test_adds_target_to_current_directory_without_touching_existing_ones(self):
+        original = (self.project / 'src/Greeter.idr').read_text()
+        mobile.add_targets(['canvas'], 'Greeter', 'app', force=False)
+        self.assertEqual((self.project / 'src/Greeter.idr').read_text(), original)
+        toml = (self.project / 'pack.toml').read_text()
+        self.assertIn('[custom.all.greeter-web]', toml)
         self.assertIn('[custom.all.greeter-canvas]', toml)
-        self.assertTrue((project / 'canvas.ipkg').is_file())
+        self.assertTrue((self.project / 'canvas.ipkg').is_file())
+
+    def test_cli_layer_defaults_module_to_capitalized_cwd_name(self):
+        # No --module: main() must derive 'Greeter' from the cwd ('greeter'),
+        # matching the module new_project already generated for this fixture.
+        mobile.main(['add', 'canvas'])
+        self.assertTrue((self.project / 'canvas.ipkg').is_file())
+        self.assertIn('import Greeter', (self.project / 'src/MainCanvas.idr').read_text())
+
+    def test_refuses_without_an_existing_pack_toml(self):
+        bare = self.root / 'bare'; bare.mkdir()
+        with patch.object(mobile.Path, 'cwd', return_value=bare):
+            with self.assertRaisesRegex(ValueError, 'not an iris project'):
+                mobile.add_targets(['web'], 'Bare', 'app', force=False)
 
     def test_rerun_same_target_without_force_fails_cleanly(self):
-        project = self.root / 'greeter'
-        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
         with self.assertRaisesRegex(ValueError, 'Refusing to overwrite'):
-            mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
+            mobile.add_targets(['web'], 'Greeter', 'app', force=False)
+        mobile.add_targets(['web'], 'Greeter', 'app', force=True)
 
-    def test_default_project_reuses_cwd_inside_existing_project(self):
-        project = self.root / 'greeter'
-        mobile.new_project(project, 'greeter', ['web'], 'Greeter', 'app', force=False)
-        with patch.object(mobile.Path, 'cwd', return_value=project):
-            self.assertEqual(mobile.new_default_project('greeter'), project)
 
-    def test_default_project_creates_subdirectory_from_parent(self):
-        with patch.object(mobile.Path, 'cwd', return_value=self.root):
-            self.assertEqual(mobile.new_default_project('greeter'), self.root / 'greeter')
-        # Same-named cwd with no pack.toml yet (not actually inside a project) still nests.
-        namesake = self.root / 'greeter'; namesake.mkdir()
-        with patch.object(mobile.Path, 'cwd', return_value=namesake):
-            self.assertEqual(mobile.new_default_project('greeter'), namesake / 'greeter')
+class CapacitorConfigTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.home = Path(self.temp.name).resolve()
+        self.env_patch = patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.home)})
+        self.env_patch.start()
+        self.addCleanup(self.env_patch.stop)
+
+    def test_remember_then_recall_round_trips_the_path(self):
+        self.assertIsNone(mobile.remembered_capacitor())
+        target = self.home / 'capacitor'; target.mkdir()
+        mobile.remember_capacitor(target)
+        self.assertEqual(mobile.remembered_capacitor(), target)
 
 
 if __name__ == '__main__':
