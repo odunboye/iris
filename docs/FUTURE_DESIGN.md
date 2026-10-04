@@ -1,4 +1,4 @@
-# Flux UI — future design and historical architecture
+# Iris — future design and historical architecture
 
 > This is a historical design proposal, not a supported API or a correctness guarantee.
 > Start with [the implemented architecture](concepts/architecture.md) and [capabilities](reference/capabilities.md).
@@ -75,7 +75,7 @@ release checklist is [the release checklist](reference/release-checklist.md).
 | --- | --- |
 | TEA core (`Core/`, `State/TEA.idr`) | Types, Widget, VTree, Runtime, Signal — real logic, no TODOs |
 | VTree / Reconciler | Diffing implemented |
-| TUI backend (`Backend/Terminal/*`) | 10 files, ~57 KB, zero TODOs; real POSIX/Windows terminal C shim (`c/fluxuitui.c`) |
+| TUI backend (`Backend/Terminal/*`) | 10 files, ~57 KB, zero TODOs; real POSIX/Windows terminal C shim (`c/iristui.c`) |
 | TUI widgets (`Widget/TUI/*`) | 8 files, ~1,065 lines |
 | Web DOM backend | Typed browser events, semantic controls, responsive CSS, focus preservation, and ordered dispatch |
 | Canvas/WebView backend | Rendering, responsive viewport layout, typed pointer/lifecycle events, and button/checkbox hit testing |
@@ -112,7 +112,7 @@ desktop and embedded targets are deferred.
 
 ## 2. What We Steal From Whom
 
-| Framework           | What Flux UI Borrows                                                               |
+| Framework           | What Iris Borrows                                                               |
 | ------------------- | ------------------------------------------------------------------------------- |
 | **Elm / TEA**       | Pure Model–Msg–Update–View loop; explicit side-effects via Cmd/Sub              |
 | **React**           | Virtual tree diffing; component composability; reconciler concept               |
@@ -127,7 +127,7 @@ desktop and embedded targets are deferred.
 | **CSS / Yoga**      | Flexbox layout model; style inheritance; cascade                                |
 | **Dear ImGui**      | Immediate-mode debug overlays; retained-mode widgets borrow its simplicity      |
 
-### What Flux UI Does Better (thanks to Idris2)
+### What Iris Does Better (thanks to Idris2)
 
 - **Dependent types** — the widget tree can be _proven_ structurally valid at compile time
   (e.g. a `Table n` has rows of exactly `n` cells; a `Router` exhausts all routes)
@@ -135,7 +135,7 @@ desktop and embedded targets are deferred.
 - **Algebraic effects** — platform I/O is modelled as typed effects, not stringly-typed callbacks
 - **Elaborator reflection** — compile-time CSS-like DSL, zero-cost at runtime
 - **Multiple backends** — Idris2 already targets JS, C (RefC), Chez Scheme, Racket;
-  Flux UI piggy-backs on all of them
+  Iris piggy-backs on all of them
 
 ---
 
@@ -164,7 +164,7 @@ desktop and embedded targets are deferred.
 ║                         APPLICATION LAYER                            ║
 ║           User-written Model / View / Update / Routes                ║
 ╠══════════════════════════════════════════════════════════════════════╣
-║                        FLUX UI CORE FRAMEWORK                        ║
+║                        IRIS CORE FRAMEWORK                        ║
 ║  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐               ║
 ║  │  State (TEA) │  │ Widget Tree  │  │ Effect System│               ║
 ║  │  + Signals   │  │ (VTree/Diff) │  │ (Cmd/Sub/    │               ║
@@ -207,7 +207,7 @@ User Event
 [ Input Driver ]  ──►  Normalised Event
                               │
                               ▼
-                      [ Flux UI Runtime ]
+                      [ Iris Runtime ]
                        update msg model
                               │
                    ┌──────────┴──────────┐
@@ -240,7 +240,7 @@ Legend: ✅ Implemented · 🚧 Partial (has TODOs / stub fields) · 📋 Not st
 src/
 ├── Main.idr                         ← entry point (runtime bootstrap)
 │
-└── Flux/UI/
+└── Iris/
     │
     ├── Core/                         ✅ Implemented
     │   ├── Types.idr                ← fundamental types (Color, Size, Point, Rect …)
@@ -324,7 +324,7 @@ src/
     │   │   └── Runtime.idr          ← bare-metal / RTOS loop
     │   │
     │   └── Terminal/                ✅ Implemented — the flagship backend (10 files, zero TODOs,
-    │       │                          real POSIX/Windows C shim in c/fluxuitui.c)
+    │       │                          real POSIX/Windows C shim in c/iristui.c)
     │       ├── Types.idr            ← TermColor, CellStyle, Cell, CellBuffer, BorderChars
     │       ├── ANSI.idr             ← Escape sequence generators
     │       ├── Diff.idr             ← Double-buffer cell differ
@@ -401,7 +401,7 @@ src/
 
 ## 6. State Management — Enhanced TEA
 
-Flux UI uses **The Elm Architecture** as its foundation, extended with **Signals** for
+Iris uses **The Elm Architecture** as its foundation, extended with **Signals** for
 fine-grained reactivity and a **Store** for globally-shared state.
 
 ### 6.1 Core TEA
@@ -506,7 +506,7 @@ data Widget : (msg : Type) -> Type where
 
 ## 8. Layout Engine
 
-Flux UI implements a **Flexbox-compatible** layout engine (same algorithm used in
+Iris implements a **Flexbox-compatible** layout engine (same algorithm used in
 React Native, Yoga, and Flutter) with an optional **CSS Grid** subset.
 
 ### Layout is a two-pass algorithm
@@ -533,7 +533,7 @@ layout : (0 proof : ValidConstraints minW maxW minH maxH)
 
 ## 9. Styling System
 
-Flux UI uses a **design-token** based style system inspired by CSS Custom Properties,
+Iris uses a **design-token** based style system inspired by CSS Custom Properties,
 Tailwind, and Radix UI Themes.
 
 ### Three style layers
@@ -666,7 +666,7 @@ DOM renderer exists and works (used by `examples/todo-web`); Canvas2D/WebGL rend
 and 4 other TODOs remain open.
 
 ```
-Flux UI → JS codegen → browser
+Iris → JS codegen → browser
   ├── DOM renderer     (div/span tree, CSS layout, no canvas overhead)
   ├── Canvas2D renderer (HTML5 Canvas, pixel-perfect custom drawing)
   └── WebGL renderer   (GPU-accelerated, for heavy graphics)
@@ -680,7 +680,7 @@ graduate to Canvas/WebGL for performance-sensitive apps.
 `SDL2.idr` exists but is a skeleton with 6 open TODOs; no window actually opens yet.
 
 ```
-Flux UI → C (RefC) → SDL2 + OpenGL
+Iris → C (RefC) → SDL2 + OpenGL
   ├── SDL2 window + input
   ├── OpenGL 3.3 core draw calls
   └── FreeType font rasterisation
@@ -697,7 +697,7 @@ iOS    : Idris2 C → UIKit host app → Metal renderer
 Android: Idris2 C → JNI → OpenGL ES 3.0 renderer
 ```
 
-Flux UI does _not_ wrap native widgets by default — it draws everything.
+Iris does _not_ wrap native widgets by default — it draws everything.
 Optional native widget escape hatch for platform-specific components.
 
 ### 13.4 Embedded Backend (Idris2 → C, minimal) — 📋 Not started
@@ -707,7 +707,7 @@ Optional native widget escape hatch for platform-specific components.
 ### 13.5 TUI Backend (Idris2 → C or Node.js) — ✅ Implemented, flagship backend
 
 ```
-Flux UI → C (RefC) or JS (Node) → ANSI terminal
+Iris → C (RefC) or JS (Node) → ANSI terminal
   ├── CellBuffer double-buffering
   │     front: last rendered frame
   │     back:  current frame being drawn
@@ -739,14 +739,14 @@ stdout (single buffered write per frame)
 #### TUI Module Structure
 
 ```
-Flux/UI/Backend/Terminal/
+Iris/Backend/Terminal/
   Types.idr        ← TermColor, CellStyle, Cell, CellBuffer, BorderChars
   ANSI.idr         ← Escape sequence generators (pure String functions)
   Diff.idr         ← Double-buffer cell differ
   Input.idr        ← Raw stdin reader + ANSI escape sequence parser
   Runtime.idr      ← Full PAL assembly + main loop
 
-Flux/UI/Widget/TUI/
+Iris/Widget/TUI/
   Primitives.idr   ← tuiText, tuiBox, tuiHBox, tuiVBox, tuiParagraph
   List.idr         ← Scrollable selectable list
   Table.idr        ← Bordered data table (dependent-typed columns)
@@ -785,7 +785,7 @@ TermColor
   | ColorRGB r g b             -- 24-bit truecolor
 ```
 
-Flux UI automatically degrades the colour model if the terminal does not
+Iris automatically degrades the colour model if the terminal does not
 support truecolor (detected via `$COLORTERM` env var).
 
 #### TUI ↔ TEA integration
@@ -912,23 +912,23 @@ that the platform backend reads and passes to OS accessibility APIs.
 
 | Tool                | Description                                                            |
 | ------------------- | ---------------------------------------------------------------------- |
-| **flux-ui-devtools**   | Browser/desktop overlay: widget inspector, state timeline, performance |
-| **flux-ui-hot-reload** | File watcher → recompile → hot-swap widget tree                        |
-| **flux-ui-test**       | Widget testing utilities (headless renderer, event simulation)         |
-| **flux-ui-bench**      | Frame-time profiler, layout hit counter                                |
-| **flux-ui-gen**        | Scaffolding: `flux-ui-gen component MyButton`                             |
-| **flux-ui-i18n-check** | Validates all translation keys are present in all bundles              |
+| **iris-devtools**   | Browser/desktop overlay: widget inspector, state timeline, performance |
+| **iris-hot-reload** | File watcher → recompile → hot-swap widget tree                        |
+| **iris-test**       | Widget testing utilities (headless renderer, event simulation)         |
+| **iris-bench**      | Frame-time profiler, layout hit counter                                |
+| **iris-gen**        | Scaffolding: `iris-gen component MyButton`                             |
+| **iris-i18n-check** | Validates all translation keys are present in all bundles              |
 
 ---
 
 ## 20. Build System & ipkg
 
 ```
-flux-ui.ipkg          — library package
-flux-ui-web.ipkg      — web backend (depends: flux-ui)
-flux-ui-desktop.ipkg  — desktop backend (depends: flux-ui)
-flux-ui-mobile.ipkg   — mobile backend (depends: flux-ui)
-flux-ui-embedded.ipkg — embedded backend (depends: flux-ui, no GC)
+iris.ipkg          — library package
+iris-web.ipkg      — web backend (depends: iris)
+iris-desktop.ipkg  — desktop backend (depends: iris)
+iris-mobile.ipkg   — mobile backend (depends: iris)
+iris-embedded.ipkg — embedded backend (depends: iris, no GC)
 ```
 
 Idris2 backends used:
@@ -1022,7 +1022,7 @@ Idris2 backends used:
 - [x] ANSI/VT100 escape sequence generation — `Backend/Terminal/ANSI.idr`
 - [x] Double-buffer cell differ — `Backend/Terminal/Diff.idr`
 - [x] Raw stdin + escape sequence input parsing — `Backend/Terminal/Input.idr`
-- [x] Native terminal control shim — `c/fluxuitui.c` (POSIX + Windows)
+- [x] Native terminal control shim — `c/iristui.c` (POSIX + Windows)
 - [x] TUI widget vocabulary — `Widget/TUI/*` (list, table, progress, input, chart, primitives)
 - [x] TUI demo app — `examples/todo` running end-to-end
 
@@ -1082,5 +1082,5 @@ measure : Constraints -> Widget msg -> Size
 
 ---
 
-_This document is the single source of truth for Flux UI architecture decisions.
+_This document is the single source of truth for Iris architecture decisions.
 Update it as the framework evolves._
