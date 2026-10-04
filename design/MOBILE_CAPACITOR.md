@@ -151,12 +151,12 @@ mobile was asked for by name.
 ./iris setup --capacitor /path/to/capacitor
 ./iris check --capacitor /path/to/capacitor
 
-./iris compile --project /path/to/app
-./iris build --project /path/to/app
-./iris sync ios --project /path/to/app
-./iris sync android --project /path/to/app
-./iris open ios --project /path/to/app
-./iris run android --project /path/to/app
+./iris compile     # --project defaults to the current directory; pass it
+./iris build       # explicitly (--project /path/to/app) to run against a
+./iris sync ios    # project you aren't standing inside
+./iris sync android
+./iris open ios
+./iris run android
 
 ./iris install-cli  # install this launcher onto PATH
 ```
