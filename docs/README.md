@@ -40,6 +40,9 @@ compiling an app from packaging and running it.
 and terminal input handling. [Todo](../examples/todo/README.md) is a larger app.
 [Router](../examples/router/README.md) demonstrates typed routing, path/query
 parameters, navigation guards and browser history.
+[RPC client](../examples/client/README.md) demonstrates `iris-client`'s typed
+JSON-RPC-over-HTTP calls, error decoding and bearer auth against a real
+local server.
 
 ## Maintain these docs
 

@@ -1,0 +1,6 @@
+package iris-client-demo-web
+depends = iris, iris-client
+sourcedir = "."
+modules = Greet, ClientApp, MainWeb
+main = MainWeb
+executable = client-demo-web

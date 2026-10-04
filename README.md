@@ -52,6 +52,9 @@ controls, validation, descriptions and explicit focus across DOM, Canvas and TUI
 The [router example](examples/router/README.md) demonstrates typed routing:
 path/query parameters, navigation guards and browser history.
 
+The [RPC client example](examples/client/README.md) demonstrates
+`iris-client`'s typed JSON-RPC-over-HTTP calls against a real local server.
+
 ## Features
 
 - Elm-style typed state updates and effects
