@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Iris.Mobile commands</title></head><body>
+<script>
+// Mock native bridge for this demo only - copied from capacitor/js/bridge.mjs
+// (with its `export` removed) so the demo has no file dependency outside this
+// directory. Keeps the real validation logic a device would also go through;
+// only the `plugins` implementations below are fake. See README.md.
+const methods = {
+  Toast: ['show'], Dialog: ['alert', 'confirm', 'prompt'],
+  Device: ['getBatteryInfo', 'getInfo', 'getId'],
+  Network: ['getStatus'], ActionSheet: ['showActions'],
+};
+const invalid = message => { throw new TypeError(message); };
+function network(value) {
+  if (!value || typeof value.connected !== 'boolean' || typeof value.connectionType !== 'string')
+    invalid('Invalid Network status');
+  return value;
+}
+function validate(plugin, method, value, options) {
+  if (plugin === 'Network') return network(value);
+  if (plugin === 'ActionSheet') {
+    if (!value || !Number.isSafeInteger(value.index) || value.index < 0 || value.index >= options.options.length)
+      invalid('Invalid ActionSheet selection');
+  }
+  if (plugin === 'Dialog' && method === 'confirm' && typeof value?.value !== 'boolean') invalid('Invalid confirmation');
+  if (plugin === 'Dialog' && method === 'prompt' &&
+      (typeof value?.value !== 'string' || typeof value?.cancelled !== 'boolean')) invalid('Invalid prompt result');
+  if (plugin === 'Device') {
+    if (method === 'getBatteryInfo' && (!Number.isFinite(value?.batteryLevel) || value.batteryLevel < 0 ||
+        value.batteryLevel > 1 || typeof value.isCharging !== 'boolean')) invalid('Invalid battery information');
+    if (method === 'getInfo' && (!value || ['model', 'platform', 'operatingSystem', 'manufacturer', 'webViewVersion']
+        .some(key => typeof value[key] !== 'string') || typeof value.isVirtual !== 'boolean')) invalid('Invalid device information');
+    if (method === 'getId' && (typeof value?.identifier !== 'string' || !value.identifier)) invalid('Invalid device identifier');
+  }
+  return value;
+}
+function createBridge(plugins) {
+  return Object.freeze({
+    async call(plugin, method, options = {}) {
+      if (!Object.hasOwn(methods, plugin) || !methods[plugin].includes(method)) invalid('Unsupported Capacitor operation');
+      if (plugin === 'ActionSheet' && (!Array.isArray(options.options) || !options.options.length ||
+          options.options.some(x => !x || typeof x.title !== 'string'))) invalid('ActionSheet needs string options');
+      const target = plugins[plugin];
+      if (typeof target?.[method] !== 'function') throw new Error(`${plugin}.${method} is unavailable`);
+      return validate(plugin, method, await target[method](options), options);
+    },
+    listenNetwork(onStatus, onError) {
+      let closed = false, handle, removing = false;
+      const report = error => {
+        try { onError(String(error?.message ?? error)); }
+        catch { console.error('Capacitor listener error callback failed'); }
+      };
+      const removeHandle = () => {
+        if (!handle || removing) return;
+        removing = true;
+        Promise.resolve().then(() => handle.remove()).catch(report);
+      };
+      Promise.resolve().then(() => {
+        if (closed) return null;
+        if (typeof plugins.Network?.addListener !== 'function') throw new Error('Network listeners are unavailable');
+        return plugins.Network.addListener('networkStatusChange', status => {
+          if (!closed) {
+            try { onStatus(network(status)); } catch (error) { report(error); }
+          }
+        });
+      }).then(value => {
+        if (value === null && closed) return;
+        if (typeof value?.remove !== 'function') throw new Error('Invalid Network listener handle');
+        handle = value;
+        if (closed) removeHandle();
+      }).catch(error => { if (!closed) report(error); });
+      return Object.freeze({ remove() { if (!closed) { closed = true; removeHandle(); } } });
+    },
+  });
+}
+
+// The fake "native SDK" this demo's mock bridge calls into.
+const mockPlugins = {
+  Toast: { show: async () => ({}) },
+  Dialog: {
+    alert: async () => ({}),
+    confirm: async () => ({ value: true }),
+    prompt: async () => ({ value: 'Ada Lovelace', cancelled: false }),
+  },
+  Device: {
+    getBatteryInfo: async () => ({ batteryLevel: 0.87, isCharging: false }),
+    getInfo: async () => ({
+      model: 'Pixel Mock', platform: 'android', operatingSystem: 'android',
+      manufacturer: 'Google', isVirtual: true, webViewVersion: '120.0.0.0',
+    }),
+    getId: async () => ({ identifier: 'mock-device-id-0000' }),
+  },
+  Network: {
+    getStatus: async () => ({ connected: true, connectionType: 'wifi' }),
+    addListener(_eventName, callback) {
+      const id = setInterval(
+        () => callback({ connected: Math.random() > 0.5, connectionType: 'wifi' }), 4000);
+      return { remove: () => clearInterval(id) };
+    },
+  },
+  ActionSheet: { showActions: async () => ({ index: 1 }) },
+};
+globalThis.IdrisCapacitor = createBridge(mockPlugins);
+</script>
+<main id="iris-app"></main>
+<script src="build/exec/mobile-commands-web"></script>
+</body></html>

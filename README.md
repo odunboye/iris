@@ -55,6 +55,9 @@ path/query parameters, navigation guards and browser history.
 The [RPC client example](examples/client/README.md) demonstrates
 `iris-client`'s typed JSON-RPC-over-HTTP calls against a real local server.
 
+The [native commands example](examples/mobile-commands/README.md)
+demonstrates every `Iris.Mobile` command against a mock native bridge.
+
 ## Features
 
 - Elm-style typed state updates and effects

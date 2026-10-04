@@ -42,7 +42,8 @@ and terminal input handling. [Todo](../examples/todo/README.md) is a larger app.
 parameters, navigation guards and browser history.
 [RPC client](../examples/client/README.md) demonstrates `iris-client`'s typed
 JSON-RPC-over-HTTP calls, error decoding and bearer auth against a real
-local server.
+local server. [Native commands](../examples/mobile-commands/README.md)
+demonstrates every `Iris.Mobile` command against a mock native bridge.
 
 ## Maintain these docs
 

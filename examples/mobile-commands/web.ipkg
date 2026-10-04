@@ -1,0 +1,6 @@
+package iris-mobile-commands-web
+depends = iris, iris-mobile
+sourcedir = "."
+modules = MobileCommandsApp, MainWeb
+main = MainWeb
+executable = mobile-commands-web
