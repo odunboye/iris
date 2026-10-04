@@ -1,0 +1,20 @@
+name: Documentation
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  links-and-scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: make docs-check
+      - name: Check scaffold and CLI parser without npm or native SDKs
+        run: python3 -m unittest discover -s tools -p test_iris.py -k NewProjectTests
+      - name: Check adding targets
+        run: python3 -m unittest discover -s tools -p test_iris.py -k AddTargetsTests

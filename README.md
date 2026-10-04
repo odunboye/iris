@@ -1,18 +1,5 @@
 # Iris
 
-`iris` was originally built inside [Flux](https://github.com/odunboye/flux)
-(as `flux-ui`, itself an outright rename of this framework's own earlier,
-pre-Flux name, `iris`) and later moved back out to its own repo under that
-original name, since it has no Flux-specific dependencies (its `ipkg`
-depends only on `contrib`). The module prefix changed from `Flux.UI.*` back
-to `Iris.*` as part of that move. Flux's generated RPC client (`flux-client`)
-and Capacitor glue (`flux-mobile`) turned out to have the same property - no
-real dependency on Flux - and later joined this repo too, as the
-[`iris-client`](client/README.md) and [`iris-mobile`](mobile/README.md)
-sub-packages. Flux's own mobile CLI packaging/bundling tooling stayed in
-Flux regardless, the same way its application build/dev CLI stays put
-regardless of which UI framework an app imports.
-
 Iris is an experimental cross-platform declarative UI framework for Idris 2.
 Applications describe a pure model/update/view loop and render through terminal,
 Web DOM, or HTML Canvas/Capacitor backends.
@@ -20,6 +7,12 @@ Web DOM, or HTML Canvas/Capacitor backends.
 > **Release status:** `0.4.x` preview APIs. The TUI and Web foundations are
 > usable previews. Capacitor bundles are portable and tested in browsers, but
 > native store releases still require platform-specific device validation.
+
+## Documentation
+
+Start with [your first app: web to Android](docs/tutorials/web-to-android.md).
+The [documentation index](docs/README.md) links project structure, effects, forms,
+backend explanations, API/CLI references and troubleshooting.
 
 ## Minimal application
 
@@ -75,7 +68,9 @@ controls, validation, descriptions and explicit focus across DOM, Canvas and TUI
 
 - Idris 2 `0.8.x`
 - `make`
-- Node.js `20.x` for browser tests and Capacitor tooling
+- Node.js `20.x` for the existing browser test baseline; Node.js `22+` for the current mobile packaging CLI
+- Python `3.11+` for the CLI and documentation checks
+- Pack and Git for scaffolding/dependency management
 - A C compiler for the terminal support library
 
 Native validation additionally requires Xcode and/or the Android SDK.
@@ -86,9 +81,9 @@ Native validation additionally requires Xcode and/or the Android SDK.
 pack --no-prompt install iris
 ```
 
-To use this as a pinned git dependency from another project's `pack.toml`
-(the way Flux itself now does), see `workspace.json`'s `external_packages` in
-the [Flux repo](https://github.com/odunboye/flux) for the current pattern.
+`iris new` generates a git-pinned dependency registration for an application.
+The current mobile compiler requires a local map instead; follow
+[the tutorial's dependency setup](docs/tutorials/web-to-android.md#4-use-a-local-iris-dependency-for-mobile-compilation).
 
 ## Build and test
 
@@ -141,20 +136,23 @@ release checklist.
 here from Flux's `flux mobile ...`, since it has no dependency on Flux's
 server):
 
+Install the checkout launcher once, then use `iris` inside generated projects:
+
 ```bash
-./iris new myapp     # start a new project - web + mobile by default,
-                      # capacitor and an app id are handled automatically
+./iris install-cli
+iris new myapp --target web
 cd myapp
-./iris add terminal canvas   # ...or add more targets, any time
-./iris build         # compile/build/sync/open/run default --project to
-./iris sync ios      # the current directory - no need to pass it when
-                      # you're already standing inside the project
-./iris install-cli   # install this launcher onto PATH
+iris add mobile
+# Configure the local dependency map and mobile tooling, then:
+iris compile
+iris build
+iris run android
 ```
 
-See [`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) for
-`./iris new`/`add`'s full behavior, configuration, the full command
-reference, and ownership/publication mechanics.
+See [the CLI reference](docs/reference/cli.md) and
+[the full web-to-Android tutorial](docs/tutorials/web-to-android.md).
+[`design/MOBILE_CAPACITOR.md`](design/MOBILE_CAPACITOR.md) covers detailed
+ownership and publication mechanics.
 
 ## Supported scope
 

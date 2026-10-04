@@ -447,7 +447,7 @@ def new_target(project, target, module, app_value, name, force, capacitor=None, 
         except FileNotFoundError:
             non_local = ['(no pack.toml found)']
         if non_local:
-            print('Note: ./iris compile/build requires every pack.toml custom.all entry to be '
+            print('Note: iris compile requires every pack.toml custom.all entry to be '
                   'type = "local", including iris itself - currently not true for: ' + ', '.join(non_local))
 
 

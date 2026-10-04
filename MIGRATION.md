@@ -10,7 +10,7 @@ describes that past event, not the current package name or layout (the link
 below, and the `src/Flux/UI/` path it mentions, are from that same vendored
 Flux checkout and no longer apply here).
 
-The later [coordinated package rename](../../design/PACKAGE_MIGRATION.md)
+The later coordinated package rename in the original Flux workspace
 changes the supporting client/server/transport package IDs. The Flux UI source
 and runtime migration below is unchanged.
 

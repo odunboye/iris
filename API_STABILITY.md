@@ -7,10 +7,13 @@ an explicit breaking cutover with no legacy aliases; see [MIGRATION.md](MIGRATIO
 ## Supported toolchain
 
 - Idris 2: 0.8.x
-- Node.js: 20.x for browser tests and Capacitor tooling
-- Capacitor: 5.x in the Todo mobile example
+- Node.js: 20.x for the existing browser test baseline; 22+ for the current mobile packaging CLI
+- Python: 3.11+ for the CLI and documentation checks
+- Capacitor: 5.x in the older Todo example; 8.4.3 in the current packaging tooling
 
-CI is the source of truth for supported combinations.
+See the [packaging lockfile](tooling/package-lock.json),
+[Todo manifest](examples/todo/mobile/package.json) and
+[validation guidance](docs/guides/testing-and-release.md) for the distinct environments.
 
 ## Stable application surface
 
@@ -67,7 +70,8 @@ Future design proposals are in [FUTURE_DESIGN.md](FUTURE_DESIGN.md).
 Use `sKey "account-name" defaultStyle` on interactive DOM controls whose position
 can change. Keys are unique across the page and belong to logical controls, not
 list positions. DOM patching preserves keyed siblings; moving a control beneath
-a different parent can recreate it. Canvas ignores this DOM-specific key for now.
+a different parent can recreate it. Canvas uses keys in its semantic control overlay for identity and focus, but
+does not use the DOM runner's incremental patching strategy.
 Unkeyed controls retain positional compatibility behavior.
 
 Use `CompletingTask` for finite asynchronous operations: deliver the result, then
