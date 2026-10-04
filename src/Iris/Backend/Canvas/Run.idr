@@ -38,8 +38,9 @@ prim_canvasClientW : String -> PrimIO Int
 %foreign "javascript:lambda: (sel,_w) => { const c=document.querySelector(sel); return c ? c.clientHeight : 812; }"
 prim_canvasClientH : String -> PrimIO Int
 
--- Scale canvas for the device pixel ratio (sharp on Retina / high-DPI)
-%foreign "javascript:lambda: (sel,_w) => { const dpr=window.devicePixelRatio||1; const c=document.querySelector(sel); if(c){const w=Math.max(1,Math.round(c.clientWidth*dpr)),h=Math.max(1,Math.round(c.clientHeight*dpr)); if(c.width!==w||c.height!==h){c.width=w;c.height=h;} const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);} }"
+-- Scale the bitmap while retaining logical CSS dimensions. Unstyled canvases
+-- otherwise resize their layout with every bitmap update on high-DPI devices.
+%foreign "javascript:lambda: (sel,_w) => { const dpr=window.devicePixelRatio||1; const c=document.querySelector(sel); if(c){const logicalW=c.clientWidth,logicalH=c.clientHeight; const w=Math.max(1,Math.round(logicalW*dpr)),h=Math.max(1,Math.round(logicalH*dpr)); if(c.width!==w||c.height!==h){c.width=w;c.height=h;const sizing=(c.clientWidth!==logicalW?'width:'+logicalW+'px;':'')+(c.clientHeight!==logicalH?'height:'+logicalH+'px;':'');if(sizing&&globalThis.__irisCanvasSheet){const sheet=globalThis.__irisCanvasSheet,cls='iris-canvas-intrinsic-'+sheet.cssRules.length;sheet.insertRule('.'+cls+'{'+sizing+'}',sheet.cssRules.length);c.classList.add(cls);}} const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);} }"
 prim_initCanvas : String -> PrimIO ()
 
 %foreign "javascript:lambda: (sel,_w) => { const canvas=document.querySelector(sel);if(!canvas)return;if(!globalThis.__irisCanvasSheet){const sheet=new CSSStyleSheet();sheet.replaceSync('.iris-canvas-host{position:relative}.iris-canvas-control{opacity:.001;background:transparent;color:transparent;border:0;pointer-events:auto}.iris-canvas-control:focus-visible{opacity:1;outline:3px solid #58a6ff;outline-offset:2px}.iris-canvas-input{caret-color:#58a6ff}.iris-canvas-semantics .iris-control-details{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}');document.adoptedStyleSheets=[...document.adoptedStyleSheets,sheet];globalThis.__irisCanvasSheet=sheet;globalThis.__irisCanvasRules=new Map();globalThis.__irisCanvasApplyStyles=(root)=>root.querySelectorAll('[data-iris-style]').forEach(el=>{const value=el.dataset.irisStyle;let cls=globalThis.__irisCanvasRules.get(value);if(!cls){cls='iris-canvas-dyn-'+globalThis.__irisCanvasRules.size;sheet.insertRule('.'+cls+'{'+value+'}',sheet.cssRules.length);globalThis.__irisCanvasRules.set(value,cls);}el.classList.add(cls);el.removeAttribute('data-iris-style');});}let overlay=canvas.nextElementSibling;if(!overlay||!overlay.classList.contains('iris-canvas-semantics')){overlay=document.createElement('div');overlay.className='iris-canvas-semantics';canvas.insertAdjacentElement('afterend',overlay);}const parent=canvas.parentElement;if(parent&&getComputedStyle(parent).position==='static')parent.classList.add('iris-canvas-host');overlay.setAttribute('data-iris-style','position:absolute;left:'+canvas.offsetLeft+'px;top:'+canvas.offsetTop+'px;width:'+canvas.clientWidth+'px;height:'+canvas.clientHeight+'px;pointer-events:none');globalThis.__irisCanvasApplyStyles(parent||document); }"
@@ -261,11 +262,11 @@ rafLoop app selector ctx metric modelRef quitRef control targetsRef captureRef =
 public export
 runCanvasOn : String -> CanvasMetric -> Nat -> Nat -> UIApp mdl outMsg -> IO ()
 runCanvasOn sel metric _ _ app = do
+  primIO (prim_setupSemantics sel)
   primIO (prim_initCanvas sel)
   ctx <- primIO (prim_getCtx sel)
 
   primIO (prim_setupEvents sel)
-  primIO (prim_setupSemantics sel)
   primIO prim_setupSemanticEvents
 
   let (initMdl, initCmd) = app.init

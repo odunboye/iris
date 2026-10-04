@@ -235,3 +235,31 @@ for (const host of ['index.html', 'canvas.html']) {
     await expect(name).toHaveValue('Alice Smith Jr ');
   });
 }
+
+for (const styled of [false, true]) {
+  test(`high-DPI Canvas keeps stable ${styled ? 'responsive' : 'intrinsic'} dimensions`, async ({ browser }) => {
+    const context = await browser.newContext({ deviceScaleFactor: 3.5, viewport: { width: 400, height: 800 } });
+    const page = await context.newPage();
+    if (!styled) await page.route('**/canvas.css', route => route.fulfill({ contentType: 'text/css', body: '' }));
+    await page.goto('/examples/counter/canvas.html');
+    const canvas = page.locator('#iris-canvas');
+    const dimensions = () => canvas.evaluate(el => ({
+      width: el.width, height: el.height, cssWidth: el.clientWidth, cssHeight: el.clientHeight
+    }));
+    const expected = styled
+      ? { width: 1400, height: 2800, cssWidth: 400, cssHeight: 800 }
+      : { width: 2240, height: 1680, cssWidth: 640, cssHeight: 480 };
+    await expect.poll(dimensions).toEqual(expected);
+    await page.waitForTimeout(300);
+    expect(await dimensions()).toEqual(expected);
+    await page.setViewportSize({ width: 800, height: 400 });
+    await expect.poll(dimensions).toEqual(styled
+      ? { width: 2800, height: 1400, cssWidth: 800, cssHeight: 400 }
+      : expected);
+    expect(await page.locator('style, [style]').count()).toBe(0);
+    const before = await canvas.evaluate(el => el.toDataURL());
+    await page.getByRole('button', { name: 'Increment', exact: true }).click();
+    await expect.poll(() => canvas.evaluate(el => el.toDataURL())).not.toBe(before);
+    await context.close();
+  });
+}
