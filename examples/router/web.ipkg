@@ -1,0 +1,6 @@
+package iris-router-web
+depends = iris
+sourcedir = "."
+modules = Route, RouterApp, MainWeb
+main = MainWeb
+executable = router-web

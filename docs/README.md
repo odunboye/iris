@@ -38,6 +38,8 @@ compiling an app from packaging and running it.
 [Counter](../examples/counter/README.md) demonstrates three runners.
 [Account form](../examples/form/README.md) demonstrates browser control metadata
 and terminal input handling. [Todo](../examples/todo/README.md) is a larger app.
+[Router](../examples/router/README.md) demonstrates typed routing, path/query
+parameters, navigation guards and browser history.
 
 ## Maintain these docs
 

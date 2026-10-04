@@ -49,6 +49,9 @@ DOM and Canvas entry points, package files and browser hosts.
 The [account form](examples/form/README.md) demonstrates disabled/read-only
 controls, validation, descriptions and explicit focus across DOM, Canvas and TUI.
 
+The [router example](examples/router/README.md) demonstrates typed routing:
+path/query parameters, navigation guards and browser history.
+
 ## Features
 
 - Elm-style typed state updates and effects
