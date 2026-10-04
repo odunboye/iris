@@ -128,3 +128,50 @@ for (const stop of ['button', 'keyboard']) {
     await expect.poll(() => page.evaluate(() => window.__capRemoved)).toBe(3);
   });
 }
+
+// Insert/remove an interactive sibling while the original input is focused.
+test('keyed controls preserve logical focus and selection across insertion', async ({ page }) => {
+  await page.goto('/tests/keyed-dom.html');
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await name.focus();
+  await name.evaluate(el => el.setSelectionRange(1, 3));
+  const originalId = await name.getAttribute('id');
+  await name.evaluate(el => window.__keyedOriginal = el);
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(name).toBeFocused();
+  expect(await name.getAttribute('id')).toBe(originalId);
+  expect(await name.evaluate(el => el === window.__keyedOriginal)).toBe(true);
+  expect(await name.evaluate(el => [el.selectionStart, el.selectionEnd])).toEqual([1, 3]);
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(1);
+  await expect(name).toBeFocused();
+  const toggle = page.getByRole('button', { name: 'Toggle', exact: true });
+  await toggle.focus();
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(toggle).toBeFocused();
+});
+
+test('DOM patching preserves an in-progress composition during sibling updates', async ({ page }) => {
+  await page.goto('/tests/keyed-dom.html');
+  const name = page.getByRole('textbox', { name: 'Name', exact: true });
+  await name.focus();
+  await name.evaluate(el => {
+    window.__composingOriginal = el;
+    el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true, data: '' }));
+    el.value = '正在输入';
+  });
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(2);
+  await expect(name).toHaveValue('正在输入');
+  await expect(name).toBeFocused();
+  expect(await name.evaluate(el => el === window.__composingOriginal)).toBe(true);
+  await name.evaluate(el => {
+    el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: el.value }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await page.keyboard.press('F2');
+  await expect(page.getByRole('textbox')).toHaveCount(1);
+  await expect(name).toHaveValue('正在输入');
+});

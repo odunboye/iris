@@ -24,7 +24,7 @@ networkSubscription "mobile-network" NetworkLoaded
 ```
 
 `perform` adapts a typed `Async JS [JSErr] a` plugin operation into a
-`CancellableTask`. Errors are messages. Operations are invoked once, with no
+`CompletingTask`. Errors are messages. Operations are invoked once, with no
 retry/resume replay. Cancellation suppresses late results but **cannot undo an
 already-started native operation**. It must never be used to imply that a
 payment/dialog/permission request was rolled back.

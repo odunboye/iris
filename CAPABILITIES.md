@@ -10,9 +10,9 @@ platform. Share `UIApp` and `Widget`; select behavior using this matrix.
 | Scrolling | Browser scroll container | Application controls offsets | Application controls offsets; not a general native scroll system |
 | Keyboard/text | Native browser input, composition and typed key events | Terminal key events; application handles editing/activation | Native overlay input, composition and typed key events |
 | Pointer | Browser controls and typed pointer events | No portable pointer-control interaction promised | Hit testing, pointer capture, clipped/transformed targets |
-| Focus | Native focus with restoration across render | Application-defined input handling; no DOM-style focus guarantee | Overlay restores active control and selection |
+| Focus | Native focus with keyed node preservation across updates | Application-defined input handling; no DOM-style focus guarantee | Overlay restores active control and selection |
 | Accessibility | Semantic controls, names, progress/status semantics | Terminal output; no screen-reader widget semantics contract | Semantic controls in DOM overlay; richer labeling metadata remains limited |
-| Effect lifecycle | Managed `CancellableTask` cleanup on pause/quit; stale callbacks rejected | Cooperative cleanup on quit/Ctrl+C; starters register on the owner loop | Managed cleanup on pause/quit; quit removes overlay, listeners and generated stylesheet |
+| Effect lifecycle | Managed cleanup on pause/quit; finite completion retires cleanup; stale callbacks rejected | Cooperative cleanup on quit/Ctrl+C; starters register on the owner loop | Managed cleanup on pause/quit; quit removes overlay, listeners and generated stylesheet |
 | Raw `Task`/`StreamTask` | Cannot forcibly interrupt arbitrary IO | Cannot forcibly interrupt or promise joining arbitrary IO | Cannot forcibly interrupt arbitrary IO |
 | Navigation | Browser history/location events and router helpers | Application-defined navigation | Browser/WebView location events; device back behavior needs validation |
 | Hot replacement | Opt-in `runWebHot` with explicit state codec | Not supported | Not supported |

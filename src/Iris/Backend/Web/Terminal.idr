@@ -115,6 +115,7 @@ webExecCmd (MapCmd f c)     send quitRef = webExecCmd c (send . f) quitRef
 webExecCmd (Task io)        send _       = io >>= send
 webExecCmd (StreamTask act) send _       = act send
 webExecCmd (CancellableTask act) send _  = ignore (act send)
+webExecCmd (CompletingTask act) send _ = ignore (act send (pure ()))
 webExecCmd QuitApp          _    quitRef = writeIORef quitRef True
 
 -- ─── Message dispatcher ──────────────────────────────────────────────────────

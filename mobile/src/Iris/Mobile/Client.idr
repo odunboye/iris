@@ -21,15 +21,17 @@ prim__request : String -> String -> String -> String -> Int -> Int ->
 prim__cancel : AnyPtr -> PrimIO ()
 
 transport : FetchOptions -> Transport
-transport options request result = CancellableTask $ \send => do
+transport options request result = CompletingTask $ \send, retire => do
   let headers = encode (JObject (map (\(key,value) => (key, JString value)) request.headers))
       complete : Int -> String -> PrimIO ()
-      complete status body = toPrim $ send $ result $
-        if status == -2 then Left Timeout
-        else if status == -3 then Left (ResponseTooLarge options.maxResponseBytes)
-        else if status < 0 then Left (NetworkError "Mobile RPC unavailable; no request has been retried")
-        else if status >= 200 && status < 300 then Right (MkResponse status [] body)
-        else Left (BadStatus status body)
+      complete status body = toPrim $ do
+        send $ result $
+          if status == -2 then Left Timeout
+          else if status == -3 then Left (ResponseTooLarge options.maxResponseBytes)
+          else if status < 0 then Left (NetworkError "Mobile RPC unavailable; no request has been retried")
+          else if status >= 200 && status < 300 then Right (MkResponse status [] body)
+          else Left (BadStatus status body)
+        retire
   handle <- primIO (prim__request (methodStr request.method) request.url headers
     (fromMaybe "" request.body) (cast options.timeoutMs) (cast options.maxResponseBytes) complete)
   pure (primIO (prim__cancel handle))

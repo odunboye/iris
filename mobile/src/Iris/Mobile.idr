@@ -20,14 +20,16 @@ record MobileError where
 ||| started. The operation runs once, without automatic retry or resume replay.
 export
 perform : Async JS [JSErr] a -> (Either MobileError a -> msg) -> Cmd msg
-perform operation result = CancellableTask $ \send => do
+perform operation result = CompletingTask $ \send, complete => do
   alive <- newIORef True
   app $ do
     outcome <- liftError operation
     live <- readIORef alive
-    if live then primIO (toPrim (send (result (case outcome of
-      Left error => Left (MkMobileError (dispErr error))
-      Right value => Right value)))) else pure ()
+    if live then primIO (toPrim (do
+      send (result (case outcome of
+        Left error => Left (MkMobileError (dispErr error))
+        Right value => Right value))
+      complete)) else pure ()
   pure (writeIORef alive False)
 
 export

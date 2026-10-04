@@ -34,7 +34,7 @@ For a same-origin browser application, use an empty base URL. Native Iris
 applications use `nativeClient base` from `Iris.Client.Native` instead. Both
 clients use the same generated endpoint functions and wire types.
 
-- Web/Capacitor: `Iris.Effect.Http.Web.requestWith`, retaining `CancellableTask`
+- Web/Capacitor: `Iris.Effect.Http.Web.requestWith`, retaining `CompletingTask`
   and its abort action; timeout/size options come from Iris's `FetchOptions`.
 - Native: in-process libcurl `Task`, with 5s connect/30s total deadlines, a 64KiB
   response cap and mandatory peer verification. No argv credentials, temporary

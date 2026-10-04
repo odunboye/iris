@@ -46,6 +46,7 @@ executeCmd (Task io)        send = do
   send result
 executeCmd (StreamTask act) send = act send
 executeCmd (CancellableTask act) send = ignore (act send)
+executeCmd (CompletingTask act) send = ignore (act send (pure ()))
 executeCmd QuitApp          _    = pure ()   -- runtime exit is handled by TUIApp
 
 -- ─── Step helper ───────────────────────────────────────────────────────────

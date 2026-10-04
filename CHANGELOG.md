@@ -1,3 +1,15 @@
+## Unreleased
+
+- DOM controls support explicit `sKey` identities and incremental patching,
+  preserving native nodes, focus and selection across sibling insertion/reordering.
+- `CompletingTask` retires finite effect cleanup on completion. Browser HTTP,
+  mobile RPC and one-shot plugin commands use it; listeners keep `CancellableTask`.
+- Terminal finite completion is marshalled onto the owner loop.
+- `Batch` starts commands in list order; asynchronous work may overlap.
+- `Style` gains an optional key field. Prefer defaultStyle plus modifiers to
+  positional MkStyle construction; existing positional construction needs Nothing
+  before the secret field. Custom Cmd interpreters must handle CompletingTask.
+
 # Changelog
 
 All notable changes to Flux UI are recorded here. The project follows Semantic

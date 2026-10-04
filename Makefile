@@ -26,6 +26,7 @@ browser-test:
 	npm run test:browser
 
 counter-check:
+	idris2 --cg javascript --build tests/keyed-dom.ipkg
 	idris2 --build tests/terminal-lifecycle.ipkg
 	idris2 --cg javascript --build tests/canvas-lifecycle.ipkg
 	idris2 --build examples/counter/terminal.ipkg

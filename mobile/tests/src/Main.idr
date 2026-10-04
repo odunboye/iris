@@ -13,6 +13,7 @@ prim__saveStop : PrimIO () -> PrimIO ()
 
 start : Cmd String -> IO (IO ())
 start (CancellableTask register) = register (\value => primIO (prim__record value))
+start (CompletingTask register) = register (\value => primIO (prim__record value)) (pure ())
 start _ = pure (pure ())
 
 vaultFlow : Async JS [JSErr] String

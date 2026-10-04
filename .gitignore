@@ -12,3 +12,7 @@ test-results/
 
 # Local tooling
 .DS_Store
+
+# Native client and Python test artifacts
+client/lib/
+__pycache__/

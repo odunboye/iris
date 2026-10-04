@@ -48,12 +48,13 @@ record Style where
   fillH     : Bool             -- stretch to fill available width
   fillV     : Bool             -- stretch to fill available height
   label     : Maybe String     -- box/panel title
+  key       : Maybe String    -- application-owned DOM identity; unique per page
   secret    : Bool             -- mask input rendering; never changes edit values
 
 public export
 defaultStyle : Style
 defaultStyle = MkStyle Nothing Nothing False False False
-               NoBorder 0 0 Nothing Nothing False False Nothing False
+               NoBorder 0 0 Nothing Nothing False False Nothing Nothing False
 
 -- ─── Style helpers ───────────────────────────────────────────────────────────
 
@@ -74,6 +75,12 @@ public export sPadH    : Nat        -> Style -> Style ; sPadH    n s = { padH   
 public export sPadV    : Nat        -> Style -> Style ; sPadV    n s = { padV    := n    } s
 public export sPad     : Nat        -> Style -> Style
 sPad n s = { padH := n, padV := n } s
+
+||| Stable identity for an interactive DOM control. Keys must be unique across
+||| the page and stay attached to the same logical control across updates.
+public export
+sKey : String -> Style -> Style
+sKey key s = { key := Just key } s
 
 public export
 sSecret : Style -> Style

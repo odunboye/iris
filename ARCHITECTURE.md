@@ -30,7 +30,7 @@ record are compatibility APIs, not the subscription contract of `UIApp`.
 - Terminal: `Backend.Terminal.Run` renders the supported widget tree through
   `WidgetRender` and the ANSI/FFI terminal layer.
 - DOM: `Backend.Web.DOM.Run` uses semantic HTML rendering, browser event queues
-  and managed effect lifecycle handling. `runWebHot` adds opt-in versioned model
+  and managed effect lifecycle handling and keyed incremental DOM patching. `runWebHot` adds opt-in versioned model
   reconstruction; see [HMR](https://github.com/odunboye/flux/blob/main/design/DEV_HMR.md)
   (Flux's dev server implements the swap protocol around this API).
 - Canvas: `Backend.Canvas.Run` uses cell-based layout, painting and transformed

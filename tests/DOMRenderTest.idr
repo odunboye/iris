@@ -57,4 +57,14 @@ main = do
   let terminal = renderWidget password (MkWRect 0 0 30 1)
   assert "terminal password is masked" (contains "********" terminal && not (contains "secret" terminal))
   assert "shared canvas/terminal mask preserves character count" (inputDisplay (sSecret defaultStyle) "secret 🚀" == "********")
+  let stable = sKey "account-name" defaultStyle
+  assert "keyed identity ignores traversal order"
+    (controlId "input" stable 0 == controlId "input" stable 9)
+  assert "key encoding separates arbitrary strings"
+    (controlId "input" (sKey "a-b" defaultStyle) 0 /=
+     controlId "input" (sKey "ab" defaultStyle) 0)
+  (keyed, _, _) <- renderPage (WInput stable "value" (const 0))
+  (inserted, _, _) <- renderPage (vstack [button "New control" 1, WInput stable "value" (const 0)])
+  let identity = "id='" ++ controlId "input" stable 0 ++ "'"
+  assert "key survives insertion before input" (contains identity keyed && contains identity inserted)
   putStrLn "DOM renderer tests passed"

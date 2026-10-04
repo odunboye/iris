@@ -43,6 +43,7 @@ execCmd (MapCmd f c)  send quitRef = execCmd c (send . f) quitRef
 execCmd (Task io)     send _       = ignore $ forkIO (io >>= send)
 execCmd (StreamTask act) send _   = ignore $ forkIO (act send)
 execCmd (CancellableTask act) send _ = ignore $ forkIO (ignore (act send))
+execCmd (CompletingTask act) send _ = ignore $ forkIO (ignore (act send (pure ())))
 execCmd QuitApp       _    quitRef = writeIORef quitRef True
 
 -- ─── Ctrl+C detection ────────────────────────────────────────────────────────

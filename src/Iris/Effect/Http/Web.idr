@@ -187,13 +187,13 @@ public export
 requestWith : FetchOptions -> HttpRequest
            -> (Either HttpError HttpResponse -> msg) -> Cmd msg
 requestWith options req toMsg =
-  CancellableTask (\send => runFetch options req (send . toMsg))
+  CompletingTask (\send, complete => runFetch options req (\result => send (toMsg result) >> complete))
 
 public export
 requestWithRetry : FetchOptions -> RetryPolicy -> HttpRequest
                 -> (Either HttpError HttpResponse -> msg) -> Cmd msg
 requestWithRetry options policy req toMsg =
-  CancellableTask (\send => runFetchWithRetry options policy req (send . toMsg))
+  CompletingTask (\send, complete => runFetchWithRetry options policy req (\result => send (toMsg result) >> complete))
 
 public export
 request : HttpRequest -> (Either HttpError HttpResponse -> msg) -> Cmd msg

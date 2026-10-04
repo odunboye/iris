@@ -58,3 +58,22 @@ See [CAPABILITIES.md](CAPABILITIES.md) before relying on runner-specific behavio
 Desktop SDL2, embedded framebuffer and the generic PAL remain experimental.
 Their presence in the package manifest does not confer supported status.
 Future design proposals are in [FUTURE_DESIGN.md](FUTURE_DESIGN.md).
+
+## Explicit identity and finite effects
+
+Use `sKey "account-name" defaultStyle` on interactive DOM controls whose position
+can change. Keys are unique across the page and belong to logical controls, not
+list positions. DOM patching preserves keyed siblings; moving a control beneath
+a different parent can recreate it. Canvas ignores this DOM-specific key for now.
+Unkeyed controls retain positional compatibility behavior.
+
+Use `CompletingTask` for finite asynchronous operations: deliver the result, then
+call the provided completion action. Completion retires cleanup and rejects later
+messages. `CancellableTask` remains the ongoing-listener contract. Starters return
+promptly; their returned action releases resources on cancellation. Completion is
+idempotent and may happen before registration returns. Custom command interpreters
+must add a CompletingTask case. Style's positional constructor gains a Maybe String
+key before secret; prefer modifiers over positional construction.
+
+Batch starts commands in list order. This does not guarantee result order or
+parallel execution: browser raw Task runs inline; terminal raw Task runs on a worker.
