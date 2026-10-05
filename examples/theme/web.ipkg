@@ -1,0 +1,6 @@
+package iris-theme-demo-web
+depends = iris
+sourcedir = "."
+modules = ThemeApp, MainWeb
+main = MainWeb
+executable = theme-demo-web

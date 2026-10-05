@@ -46,6 +46,9 @@ local server. [Native commands](../examples/mobile-commands/README.md)
 demonstrates every `Iris.Mobile` command against a mock native bridge.
 [Hot reload](../examples/hot-reload/README.md) demonstrates `runWebHot`
 surviving a real swap between two separately compiled programs.
+[Theme tokens](../examples/theme/README.md) demonstrates `Iris.Theme`'s
+colour/spacing/typography/radii/shadow/motion tokens, and what's actually
+wired up versus illustrative.
 
 ## Maintain these docs
 

@@ -61,6 +61,10 @@ demonstrates every `Iris.Mobile` command against a mock native bridge.
 The [hot reload example](examples/hot-reload/README.md) demonstrates
 `runWebHot` surviving a real swap between two separately compiled programs.
 
+The [theme tokens example](examples/theme/README.md) demonstrates
+`Iris.Theme`'s design tokens, and what's actually wired up versus
+illustrative.
+
 ## Features
 
 - Elm-style typed state updates and effects
