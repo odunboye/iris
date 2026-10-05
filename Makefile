@@ -1,4 +1,4 @@
-.PHONY: counter-check build test browser-test check release-check native-check docs-check docs-test clean
+.PHONY: counter-check build test browser-test check release-check native-check docs-check docs-test docs-integration examples-setup examples-check clean
 
 build:
 	idris2 --build iris.ipkg
@@ -40,6 +40,23 @@ counter-check:
 	node --check examples/counter/build/exec/counter-web
 	node --check examples/counter/build/exec/counter-canvas
 
+# Run setup explicitly once; check itself never obtains mobile tooling.
+CAPACITOR ?= ../capacitor
+examples-setup:
+	PYTHONDONTWRITEBYTECODE=1 python3 scripts/setup-examples.py --capacitor "$(CAPACITOR)"
+
+examples-check:
+	idris2 --cg javascript --build examples/router/web.ipkg
+	idris2 --cg javascript --build examples/client/web.ipkg
+	idris2 --cg javascript --build examples/mobile-commands/web.ipkg
+	idris2 --cg javascript --build examples/hot-reload/v1.ipkg
+	idris2 --cg javascript --build examples/hot-reload/v2.ipkg
+	idris2 --cg javascript --build examples/theme/web.ipkg
+
+# Explicit end-to-end Pack/mobile CLI check; may download dependencies.
+docs-integration: docs-check
+	PYTHONDONTWRITEBYTECODE=1 python3 scripts/test-docs.py --mobile-cli
+
 docs-check:
 	PYTHONDONTWRITEBYTECODE=1 python3 scripts/check-docs.py
 	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p test_check_docs.py
@@ -52,7 +69,7 @@ check: test counter-check
 	node ./tests/build/exec/public-api-node
 	$(MAKE) -C examples/todo check
 	./scripts/validate-release.sh
-	$(MAKE) docs-test
+	$(MAKE) examples-check docs-test
 
 release-check:
 	$(MAKE) -C examples/todo check

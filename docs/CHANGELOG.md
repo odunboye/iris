@@ -1,5 +1,16 @@
 ## Unreleased
 
+## Workflow reliability (unreleased)
+
+- Serialize shared git-dependency cache publication and verify pinned commits and
+  tracked files before reuse. Require full commit hashes; bound Git subprocesses.
+- Build all new examples under `make check` after explicit `examples-setup`, with
+  browser coverage and a hosted compiler/browser workflow.
+- Make the documentation build offline by default; expose the real mobile CLI
+  path as `docs-integration` and document its dependency/setup requirements.
+- Keep the hot-reload demo's current runtime alive during fetch failures and
+  reject outdated replacement requests.
+
 - Add ControlOptions and style modifiers for disabled/read-only state, accessible
   names, descriptions, validation errors and keyed browser focus requests.
 - DOM and Canvas reject disabled activation and disabled/read-only edits. Canvas

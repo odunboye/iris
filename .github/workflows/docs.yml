@@ -18,3 +18,5 @@ jobs:
         run: python3 -m unittest discover -s tools -p test_iris.py -k NewProjectTests
       - name: Check adding targets
         run: python3 -m unittest discover -s tools -p test_iris.py -k AddTargetsTests
+      - name: Verify dependency cache using local Git repositories
+        run: python3 -m unittest discover -s tools -p test_iris.py -k GitDependencyResolutionTests

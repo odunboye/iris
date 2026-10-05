@@ -520,47 +520,113 @@ class GitDependencyResolutionTests(unittest.TestCase):
         self.env_patch = patch.dict(os.environ, {'XDG_CACHE_HOME': str(self.home / 'cache')})
         self.env_patch.start()
         self.addCleanup(self.env_patch.stop)
-        self.calls = []
+        self.repo = self.home / 'source'
+        self.git('init', '--quiet', str(self.repo))
+        (self.repo / 'fixture').write_text('original\n')
+        self.git('-C', str(self.repo), 'add', 'fixture')
+        self.git('-C', str(self.repo), '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+                 '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'fixture')
+        self.commit = self.git('-C', str(self.repo), 'rev-parse', 'HEAD')
+        self.spec = {'url': str(self.repo), 'commit': self.commit}
+        self.cache = self.home / 'cache/iris/deps/widget' / self.commit
 
-        def fake_git(args, **kwargs):
-            self.calls.append(args)
-            if args[1] == 'init':
-                Path(args[3]).mkdir(parents=True, exist_ok=True)
-            return unittest.mock.Mock(returncode=0)
+    def git(self, *args):
+        return subprocess.check_output(['git', *args], text=True, stderr=subprocess.PIPE).strip()
 
-        self.git_patch = patch.object(mobile.subprocess, 'run', side_effect=fake_git)
-        self.git_patch.start()
-        self.addCleanup(self.git_patch.stop)
-        self.spec = {'url': 'https://example.test/dep.git', 'commit': 'deadbeef' * 5}
+    def test_clones_exact_commit_and_reuses_offline(self):
+        self.assertEqual(mobile.resolved_git_dependency('widget', self.spec), self.cache)
+        self.assertEqual(self.git('-C', str(self.cache), 'rev-parse', 'HEAD'), self.commit)
+        (self.repo / 'fixture').unlink()
+        # Reuse never contacts the URL again, but still validates its checkout.
+        missing = dict(self.spec, url=str(self.home / 'missing-source'))
+        self.assertEqual(mobile.resolved_git_dependency('widget', missing), self.cache)
 
-    def test_clones_once_and_caches_by_name_and_commit(self):
-        expected = self.home / 'cache/iris/deps/widget' / self.spec['commit']
-        resolved = mobile.resolved_git_dependency('widget', self.spec)
-        self.assertEqual(resolved, expected)
-        self.assertTrue(expected.is_dir())
-        fetch = next(c for c in self.calls if 'fetch' in c)
-        self.assertIn(self.spec['url'], fetch)
-        self.assertIn(self.spec['commit'], fetch)
+    def test_empty_cache_fails_with_recovery_path(self):
+        self.cache.mkdir(parents=True)
+        with self.assertRaisesRegex(ValueError, 'Invalid dependency cache.*move this cache'):
+            mobile.resolved_git_dependency('widget', self.spec)
+        self.assertTrue(self.cache.exists())
 
-    def test_second_call_reuses_the_cache_without_cloning_again(self):
+    def test_modified_or_deleted_tracked_files_are_rejected(self):
         mobile.resolved_git_dependency('widget', self.spec)
-        self.calls.clear()
+        file = self.cache / 'fixture'
+        file.write_text('changed\n')
+        with self.assertRaisesRegex(ValueError, 'Invalid dependency cache'):
+            mobile.resolved_git_dependency('widget', self.spec)
+        file.unlink()
+        with self.assertRaisesRegex(ValueError, 'Invalid dependency cache'):
+            mobile.resolved_git_dependency('widget', self.spec)
+
+    def test_wrong_cached_commit_is_rejected(self):
         mobile.resolved_git_dependency('widget', self.spec)
-        self.assertEqual(self.calls, [])
+        (self.repo / 'fixture').write_text('next\n')
+        self.git('-C', str(self.repo), '-c', 'user.name=Test', '-c', 'user.email=test@example.test',
+                 '-c', 'commit.gpgsign=false', 'commit', '--quiet', '-am', 'next')
+        next_commit = self.git('-C', str(self.repo), 'rev-parse', 'HEAD')
+        self.git('-C', str(self.cache), 'fetch', '--quiet', str(self.repo), next_commit)
+        self.git('-C', str(self.cache), 'checkout', '--quiet', 'FETCH_HEAD')
+        with self.assertRaisesRegex(ValueError, 'Invalid dependency cache'):
+            mobile.resolved_git_dependency('widget', self.spec)
 
-    def test_failed_clone_leaves_no_partial_cache(self):
-        def failing(args, **kwargs):
-            if args[1] == 'init':
-                Path(args[3]).mkdir(parents=True, exist_ok=True)
-                return unittest.mock.Mock(returncode=0)
-            raise mobile.subprocess.CalledProcessError(1, args)
+    def test_build_outputs_do_not_invalidate_checkout(self):
+        mobile.resolved_git_dependency('widget', self.spec)
+        (self.cache / 'build').mkdir()
+        (self.cache / 'build/output').write_text('generated')
+        self.assertEqual(mobile.resolved_git_dependency('widget', self.spec), self.cache)
 
-        with patch.object(mobile.subprocess, 'run', side_effect=failing):
-            with self.assertRaises(mobile.subprocess.CalledProcessError):
-                mobile.resolved_git_dependency('widget', self.spec)
-        cache = self.home / 'cache/iris/deps/widget' / self.spec['commit']
-        self.assertFalse(cache.exists())
-        self.assertEqual(list((self.home / 'cache/iris/deps/widget').glob('*')), [])
+    def test_failed_fetch_removes_staging_and_can_retry(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            mobile.resolved_git_dependency('widget', dict(self.spec, url=str(self.home / 'missing')))
+        self.assertFalse(self.cache.exists())
+        self.assertEqual(list(self.cache.parent.glob('*.tmp')), [])
+        self.assertEqual(mobile.resolved_git_dependency('widget', self.spec), self.cache)
+
+    def test_rejects_unsafe_names_and_unpinned_revisions(self):
+        for name, commit in [('../escape', self.commit), ('widget', 'main'), ('widget', '/tmp/escape')]:
+            with self.assertRaises(ValueError):
+                mobile.resolved_git_dependency(name, dict(self.spec, commit=commit))
+        self.assertFalse((self.home / 'cache').exists())
+
+    def test_git_timeout_stops_the_owned_process_group(self):
+        process = unittest.mock.Mock()
+        process.communicate.side_effect = subprocess.TimeoutExpired(['git'], 300)
+        with patch.object(mobile.subprocess, 'Popen', return_value=process) as start:
+            with patch.object(mobile.mobile_check, 'stop_group') as stop:
+                with self.assertRaises(subprocess.TimeoutExpired):
+                    mobile.dependency_git(['fetch', 'fixture'])
+        self.assertTrue(start.call_args.kwargs['start_new_session'])
+        stop.assert_called_once_with(process)
+
+    def test_concurrent_processes_publish_one_checkout(self):
+        import sys
+        code = """
+import sys, time
+sys.path.insert(0, sys.argv[1])
+import iris
+original = iris.dependency_git
+def observed(args):
+    if 'fetch' in args:
+        with open(sys.argv[4], 'a') as log: log.write('fetch\\n')
+        time.sleep(0.2)
+    return original(args)
+iris.dependency_git = observed
+iris.resolved_git_dependency('widget', {'url': sys.argv[2], 'commit': sys.argv[3]})
+"""
+        argv = [sys.executable, '-c', code, str(mobile.ROOT / 'tools'), str(self.repo),
+                self.commit, str(self.home / 'fetches')]
+        processes = [subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                     for _ in range(2)]
+        try:
+            for process in processes:
+                output, errors = process.communicate(timeout=15)
+                self.assertEqual(process.returncode, 0, output + errors)
+        finally:
+            for process in processes:
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+        self.assertEqual((self.home / 'fetches').read_text().splitlines(), ['fetch'])
+        self.assertEqual(self.git('-C', str(self.cache), 'rev-parse', 'HEAD'), self.commit)
 
 
 class CompileUiDependencyTypeTests(unittest.TestCase):

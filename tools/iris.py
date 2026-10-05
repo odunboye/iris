@@ -215,29 +215,70 @@ def run(args, cwd):
     mobile_check.run(args, cwd)
 
 
+def dependency_git(args):
+    """Bounded, owned Git process; captured output is needed for cache checks."""
+    command = ['git', *map(str, args)]
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, start_new_session=True)
+    try:
+        output, errors = process.communicate(timeout=300)
+        if process.returncode:
+            raise subprocess.CalledProcessError(process.returncode, command, output, errors)
+        return output.strip()
+    except BaseException:
+        mobile_check.stop_group(process)
+        raise
+
+
+def validate_dependency_cache(cache, commit):
+    try:
+        if cache.is_symlink() or not (cache / '.git').is_dir():
+            raise ValueError('not a Git checkout')
+        actual = dependency_git(['-C', cache, 'rev-parse', '--verify', 'HEAD'])
+        dirty = dependency_git(['-C', cache, 'status', '--porcelain', '--untracked-files=no'])
+        if actual.lower() != commit or dirty:
+            raise ValueError('wrong commit or modified tracked files')
+    except (ValueError, subprocess.CalledProcessError) as error:
+        raise ValueError(f'Invalid dependency cache at {cache}: restore the pinned checkout '
+                         'or move this cache directory aside and retry') from error
+
+
 def resolved_git_dependency(name, spec):
-    # pack's own git-dependency cache only fetches what Idris compilation
-    # needs for ITS OWN resolution (the ipkg and modules it imports as a
-    # dependency), not a guaranteed-complete raw checkout - no good as a
-    # project root to hand a fresh `pack build` here. Clone and pin the
-    # exact commit ourselves instead, cached by name/commit so this only
-    # happens once per version.
+    # Separate from Pack's cache: this must contain the complete pinned checkout.
+    # Locking is per dependency, shared by every project using this cache.
+    import fcntl
     url, commit = spec['url'], spec['commit']
+    if not re.fullmatch(r'[A-Za-z0-9_-]+', name):
+        raise ValueError('Invalid Pack package name')
+    if not isinstance(commit, str) or not re.fullmatch(r'[a-fA-F0-9]{40}', commit):
+        raise ValueError('Git dependencies require a full 40-character commit hash')
+    if not isinstance(url, str) or not url or url.startswith('-'):
+        raise ValueError('Invalid Git dependency URL')
+    commit = commit.lower()
     base = Path(os.environ.get('XDG_CACHE_HOME') or (Path.home() / '.cache'))
-    cache = base / 'iris/deps' / name / commit
-    if not cache.is_dir():
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        staging = cache.with_name(cache.name + '.' + uuid.uuid4().hex + '.tmp')
+    parent = base / 'iris/deps' / name
+    parent.mkdir(parents=True, exist_ok=True)
+    cache = parent / commit
+    with (parent / (commit + '.lock')).open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
         try:
-            subprocess.run(['git', 'init', '--quiet', str(staging)], check=True)
-            subprocess.run(['git', '-C', str(staging), 'fetch', '--quiet', '--depth', '1', url, commit], check=True)
-            subprocess.run(['git', '-C', str(staging), 'checkout', '--quiet', 'FETCH_HEAD'], check=True)
-            staging.rename(cache)
-        except BaseException:
-            shutil.rmtree(staging, ignore_errors=True)
-            raise
-        print(f'Cloned {name}@{commit[:12]} to {cache}')
-    return cache
+            if cache.exists() or cache.is_symlink():
+                validate_dependency_cache(cache, commit)
+                return cache
+            staging = cache.with_name(cache.name + '.' + uuid.uuid4().hex + '.tmp')
+            try:
+                dependency_git(['init', '--quiet', staging])
+                dependency_git(['-C', staging, 'fetch', '--quiet', '--depth', '1', url, commit])
+                dependency_git(['-C', staging, 'checkout', '--quiet', 'FETCH_HEAD'])
+                validate_dependency_cache(staging, commit)
+                staging.rename(cache)
+            except BaseException:
+                shutil.rmtree(staging, ignore_errors=True)
+                raise
+            print(f'Cloned {name}@{commit[:12]} to {cache}')
+            return cache
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
 
 
 def compile_ui(project, override=None):

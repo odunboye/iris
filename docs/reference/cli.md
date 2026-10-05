@@ -59,3 +59,12 @@ with an explicit device ID.
 Source: [tools/iris.py](../../tools/iris.py). Configuration and ownership:
 [configuration reference](configuration.md) and
 [packaging design](mobile-capacitor.md).
+
+## Dependency cache validation
+
+Git dependencies must use a full 40-character commit hash. Resolution is locked
+per package/commit across projects. Reuse verifies HEAD and tracked-file state;
+generated untracked build outputs are allowed. An invalid checkout is reported
+with its cache path. Restore it or move that directory aside before retrying;
+Iris does not silently overwrite edits. Git subprocesses have a timeout and
+owned process-group cleanup.

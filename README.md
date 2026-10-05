@@ -107,7 +107,8 @@ local cache the first time), the same as `--capacitor`. See
 ```bash
 make build          # build iris.ipkg
 make test           # Idris test suites
-make check          # tests, web/mobile bundles, release validation
+make examples-setup # once: optional Idris dependencies; needs ../capacitor, Pack and libcurl
+make check          # core tests, all examples, tutorial and release validation
 make -C examples/todo build-terminal
 python3 tests/native_smoke.py  # both native TUI entries, FFI and keyboard shutdown
 
@@ -160,7 +161,7 @@ Install the checkout launcher once, then use `iris` inside generated projects:
 iris new myapp --target web
 cd myapp
 iris add mobile
-# Configure the local dependency map and mobile tooling, then:
+# Initialize mobile tooling if using an existing bindings checkout, then:
 iris compile
 iris build
 iris run android

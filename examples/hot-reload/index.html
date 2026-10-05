@@ -24,6 +24,8 @@ let current = null;       // {snapshot, dispose} registered by the active genera
 let pendingPayload = null;
 let isLoading = false;
 let activeLabel = null;
+let loadGeneration = 0;
+let fetchController = null;
 
 globalThis.__fluxHot = {
   loading() { return isLoading; },
@@ -47,19 +49,42 @@ globalThis.__fluxHot = {
 // (like this page's own __fluxHot) cross that boundary, which is exactly
 // what the hot-swap handoff needs.
 async function swapTo(label, src) {
-  if (activeLabel === label) return;
-  if (current) {
-    const raw = current.snapshot();
-    current.dispose();
-    current = null;
-    pendingPayload = (raw.length > 0 && raw[0] === '1') ? raw.slice(1) : null;
+  const generation = ++loadGeneration;
+  if (fetchController) fetchController.abort();
+  fetchController = null;
+  const status = document.getElementById('swap-status');
+  if (activeLabel === label) {
+    status.textContent = 'Running ' + label + '.';
+    return;
   }
-  isLoading = true;
-  activeLabel = label;
-  document.getElementById('swap-status').textContent = 'Loading ' + label + '...';
-  const code = await fetch(src).then(r => r.text());
-  new Function(code)();
-  document.getElementById('swap-status').textContent = 'Running ' + label + '.';
+  const controller = fetchController = new AbortController();
+  status.textContent = 'Loading ' + label + '...';
+  try {
+    const response = await fetch(src, { signal: controller.signal });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const code = await response.text();
+    if (generation !== loadGeneration) return;
+    // Parse first; a fetch or syntax failure leaves the current runtime alive.
+    const start = new Function(code);
+    if (current) {
+      const raw = current.snapshot();
+      current.dispose();
+      current = null;
+      pendingPayload = (raw.length > 0 && raw[0] === '1') ? raw.slice(1) : null;
+    }
+    isLoading = true;
+    start();
+    activeLabel = label;
+    status.textContent = 'Running ' + label + '.';
+  } catch (error) {
+    if (generation !== loadGeneration) return;
+    isLoading = false;
+    if (!current) activeLabel = null;
+    status.textContent = 'Could not load ' + label + ': ' + error.message +
+      (current ? '. Still running ' + activeLabel + '.' : '. Try again.');
+  } finally {
+    if (generation === loadGeneration) fetchController = null;
+  }
 }
 
 document.getElementById('load-v1').addEventListener('click', () => swapTo('v1', 'build/exec/hot-v1-web'));
