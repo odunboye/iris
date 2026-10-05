@@ -59,3 +59,11 @@ well-formed - treat it as untrusted input even though in this demo it only
 ever came from this same demo's `save`. `Counter.idr`'s `restore` rejects
 anything that doesn't parse as two `Nat`s rather than guessing, unlike
 `tests/HotDemo.idr`'s unchecked `cast`.
+
+## Load ordering and failures
+
+Selecting another version cancels the previous fetch and only the latest
+request may start a runtime. The current app keeps running while code loads.
+HTTP and JavaScript syntax failures appear in the status line and leave that
+app usable; retry by selecting the requested version again. The browser suite
+checks state restoration, reversed response order and failed-load recovery.

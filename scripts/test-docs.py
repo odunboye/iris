@@ -2,7 +2,9 @@
 """Build a fresh tutorial scaffold and the marked complete documentation modules.
 
 Iris must already be installed in the selected compiler's package environment.
-An optional real Capacitor checkout enables packaging; no native SDK is needed.
+The default build is offline after dependencies are installed. --mobile-cli
+opts into the real Pack/mobile setup path; --capacitor also enables packaging.
+No native SDK is needed.
 """
 import argparse
 import importlib.util
@@ -27,6 +29,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--compiler', default='idris2')
     parser.add_argument('--capacitor', type=Path)
+    parser.add_argument('--mobile-cli', action='store_true',
+                        help='exercise the real mobile CLI (requires Pack/Git and mobile dependencies)')
     args = parser.parse_args()
     snippets = docs.examples()
     output = ROOT / 'tests/build/docs/greeter'
@@ -35,28 +39,23 @@ def main():
         temporary = Path(directory)
         project = temporary / 'greeter'
         run([sys.executable, ROOT / 'tools/iris.py', 'new', 'greeter', '--project', project, '--target', 'web'], temporary)
-        # No --capacitor here when the caller didn't give one: let the CLI's own
-        # remembered/auto-cloned resolution supply a real, usable checkout - the
-        # same as a reader following the tutorial as written, and the only way
-        # `iris.mobile.json`'s capacitor path is actually valid for `iris compile`
-        # (which validates it even though compiling Idris source doesn't use it).
+        integration = args.mobile_cli or args.capacitor is not None
+        # A placeholder is sufficient for scaffold generation and raw compilation.
+        # Only the explicit integration mode obtains/uses a real library checkout.
         add_mobile = [sys.executable, ROOT / 'tools/iris.py', 'add', 'mobile',
                       '--app-id', 'com.example.greeter', '--app-name', 'Greeter']
         if args.capacitor:
             add_mobile += ['--capacitor', args.capacitor.resolve()]
+        elif not integration:
+            add_mobile += ['--capacitor', temporary / 'capacitor']
         run(add_mobile, project)
         for name in ['src/Greeter.idr', 'src/MainWeb.idr', 'src/MainMobile.idr']:
             if (project / name).read_text().strip() != snippets[name].strip():
                 raise ValueError(f'Tutorial does not match generated scaffold: {name}')
-        # Exercise the actual user-facing path first: `iris compile` against the
-        # untouched, freshly scaffolded pack.toml (iris still pinned as a git
-        # dependency). This is what the tutorial now tells readers to run
-        # directly, with no manual pack.toml edit.
-        run([sys.executable, ROOT / 'tools/iris.py', 'compile'], project)
-        # Below, a from-scratch raw-idris2-build pass against a *local* map -
-        # this ipkg-dir layout and already-pack-installed iris is also what the
-        # separate RequestExample.idr snippet check at the bottom needs, so it
-        # stays independent of the ./iris compile path tested just above.
+        if integration:
+            # The tutorial's git-pinned map is unchanged for this real CLI check.
+            run([sys.executable, ROOT / 'tools/iris.py', 'compile'], project)
+        # Raw compilation uses the selected compiler's installed Iris package.
         pack = project / 'pack.toml'
         text = pack.read_text()
         tail = text[text.index('[custom.all.greeter-web]'):]

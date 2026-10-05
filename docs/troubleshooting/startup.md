@@ -76,3 +76,12 @@ Confirm packaging registered plugins before the application. Read the
 the adapter separately from your app. Session-vault hosts intentionally disable
 bridge logging; do not enable payload logging as a workaround. Adapter tests
 and a successful emulator startup do not replace physical-device validation.
+
+## Invalid dependency cache
+
+The resolver reports the cache path when its Git metadata, pinned HEAD or
+tracked files are invalid. Restore the checkout or move the reported directory
+aside, then retry `iris compile`. Do not move its adjacent `.lock` file while
+other builds are running. Concurrent projects share that lock and reuse one
+completed checkout. Git dependencies require full commit hashes, not branch
+names or abbreviated revisions.

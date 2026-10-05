@@ -16,6 +16,8 @@ persistence separately. An emulator counter test is only startup evidence.
 From an Iris checkout, with Idris 2 and its dependencies installed:
 
 ```sh
+# Once, with the Capacitor bindings checkout available:
+make examples-setup CAPACITOR=/absolute/path/to/capacitor
 make check
 python3 tests/native_smoke.py
 npm ci
@@ -23,8 +25,14 @@ npx playwright install chromium
 make browser-test
 ```
 
-`make check` compiles/runs Idris tests and examples, checks release assets, and
-builds the documentation tutorial. Browser tests are a separate invocation.
+`make check` compiles/runs Idris tests, all example targets, release assets, and
+the documentation tutorial. The complete example suite requires `iris-client`
+and `iris-mobile` in the selected compiler environment. `examples-setup` uses
+Pack to install them explicitly; it requires Git/network access on a cold cache,
+a full Capacitor bindings checkout, a C compiler, `pkg-config`, and libcurl
+7.85+ development files. The repository Pack map expects a sibling
+`../capacitor` checkout; adjust that alias if your checkout is elsewhere.
+After setup, the build targets do not obtain mobile tooling automatically. Browser tests are a separate invocation.
 They cover concrete acceptance cases, not complete browser or accessibility
 certification. The pseudo-terminal smoke check needs a working native toolchain.
 
@@ -40,20 +48,31 @@ make docs-test
 `docs-test` creates a fresh scaffold, verifies the documented modules match it,
 compiles its web/mobile targets and the documented request module, and checks
 JavaScript syntax. It uses `idris2` and `node` on PATH and an already-installed
-Iris package. `make check` installs the current Iris build first.
+Iris package. This default path needs no mobile checkout, Pack invocation,
+network access or npm installation. `make check` installs the current Iris build
+first. `make examples-check` builds the six routing/RPC/mobile-command/hot-reload/
+theme targets independently after their dependencies have been installed.
 
 The emitted tutorial fixture is in `tests/build/docs/greeter`. Serve the Iris
 repository root to inspect it, or run the dedicated
 [documentation browser test](../../tests/browser/docs.spec.js). The normal
 Playwright suite includes that test once `make docs-test` has produced its fixture.
 
-For an optional real packaging check, after initializing mobile dependencies:
+The separate `make docs-integration` target exercises the real `iris compile`
+path against a fresh git-pinned scaffold. It requires Pack, Git, a commit
+available on the checkout's remote, and a real Capacitor bindings checkout.
+It can clone/download dependencies or initialize mobile npm tooling when no
+checkout is remembered. `--compiler` selects the raw compiler pass; the real CLI
+pass uses Pack's own compiler environment.
+
+For an optional real CLI and packaging check, after `iris setup` has initialized
+the bindings and packaging npm dependencies:
 
 ```sh
 python3 scripts/test-docs.py --capacitor /absolute/path/to/capacitor
 ```
 
-This bundles the fresh tutorial's mobile entry through `iris build`; it does not
+This compiles and bundles the fresh tutorial's mobile entry through `iris build`; it does not
 install an app, start an emulator or certify native behavior.
 
 ## Prepare a release
@@ -67,3 +86,11 @@ Use [the release checklist](../reference/release-checklist.md),
 Native signing, permissions, platform manifests and store submission are
 application responsibilities. Provisioned native checks are described in the
 [packaging design](../reference/mobile-capacitor.md#tests).
+
+## Hosted CI
+
+The examples/browser workflow selects Pack collection `nightly-260903`, obtains
+pinned Capacitor bindings, installs dependencies explicitly, and runs the core,
+example, documentation, Python and Chromium checks. Documentation links and
+cache regressions also run in the lightweight documentation workflow. No
+emulator or native store signing is part of these jobs.

@@ -40,16 +40,16 @@ supported application APIs, compatibility modules and proposed work.
 ## Remaining coverage
 
 This is a documentation foundation, not an exhaustive per-symbol manual.
-Next additions should be a worked routing tutorial, a complete asynchronous
-loading/error UI, a larger multi-screen app, and an indexed generated API
-reference. Native store-release guides need validated platform-specific
+Routing, typed RPC, mobile commands, hot reload and themes now have worked
+examples. Next additions should include a larger multi-screen app and an indexed
+generated API reference. Native store-release guides need validated platform-specific
 instructions. A search-enabled website can publish these Markdown sources
 without creating a second documentation source of truth.
 
-Current CI checks local documentation links and scaffold/parser regression
-checks. Compiled documentation tests join `make check` for provisioned compiler
-environments; they are also run locally for this change. Automatic hosted
-compiler/browser/native jobs remain separate CI setup work.
+CI checks links/scaffolding/cache behavior and separately provisions dependencies
+for core/example builds and browser acceptance. The offline documentation build
+joins `make check`; the real mobile CLI path is an explicit `docs-integration`
+target. Native emulator/physical-device jobs remain separate work.
 
 ## Keep docs synchronized
 

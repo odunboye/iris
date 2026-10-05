@@ -1,0 +1,51 @@
+name: Examples and browser behavior
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  examples-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Pack's upstream image provides Chez, Idris and Pack. Select a known
+    # collection below instead of following the image's default collection.
+    # https://github.com/stefan-hoeck/idris2-pack/blob/main/Dockerfile
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install native build and test prerequisites
+        run: |
+          apt-get update
+          apt-get install -y python3 pkg-config libcurl4-openssl-dev
+      - name: Obtain pinned Capacitor Idris bindings (no emulator required)
+        run: |
+          git init ../capacitor
+          git -C ../capacitor fetch --depth 1 https://github.com/odunboye/capacitor.git b72d8497230de36e37aadf1495ad430d5d534573
+          git -C ../capacitor checkout --detach FETCH_HEAD
+      - name: Select the validated compiler collection
+        run: pack --no-prompt switch nightly-260903
+      - name: Install example dependencies explicitly
+        run: make examples-setup
+      - name: Install locked JavaScript tooling
+        run: |
+          npm ci
+          npm ci --ignore-scripts --prefix tooling
+          npx playwright install --with-deps chromium
+      - name: Build and check core, examples and documented code
+        run: make check
+      - name: Test cache, packaging and policies
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+      - name: Browser acceptance
+        run: make browser-test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-evidence
+          path: |
+            test-results/
+            playwright-report/
