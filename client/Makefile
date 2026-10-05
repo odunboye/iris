@@ -11,4 +11,4 @@ endif
 native-client:
 	pkg-config --atleast-version=7.85.0 libcurl
 	mkdir -p lib
-	$(CC) $(CFLAGS) $(SHARED) $$(pkg-config --cflags libcurl) c/http.c -o lib/libflux_client_http.$(SUFFIX) $$(pkg-config --libs libcurl) -pthread
+	$(CC) $(CFLAGS) $(SHARED) $$(pkg-config --cflags libcurl) c/http.c -o lib/libiris_client_http.$(SUFFIX) $$(pkg-config --libs libcurl) -pthread

@@ -22,7 +22,7 @@ static void wipe_free(char *s) {
     while (n--) *p++ = 0;
     free(s);
 }
-void flux_client_free(void *ptr) {
+void iris_client_free(void *ptr) {
     request *r = ptr;
     if (!r) return;
     wipe_free(r->method); wipe_free(r->url);
@@ -36,7 +36,7 @@ void flux_client_free(void *ptr) {
     for (size_t n=0; n<sizeof(*r); n++) p[n]=0;
     free(r);
 }
-void *flux_client_new(const char *method, const char *url, const char *headers,
+void *iris_client_new(const char *method, const char *url, const char *headers,
                       const char *body, int has_body, const char *ca) {
     pthread_once(&once, init);
     if (!initialized || strlen(url)>8192 || strlen(headers)>8192 || strlen(body)>65536 || strlen(ca)>4096) return NULL;
@@ -44,7 +44,7 @@ void *flux_client_new(const char *method, const char *url, const char *headers,
     if (!r) return NULL;
     r->method=strdup(method); r->url=strdup(url); r->headers=strdup(headers);
     r->body=strdup(body); r->ca=strdup(ca); r->has_body=has_body; r->header_bytes=strlen(headers);
-    if (!r->method || !r->url || !r->headers || !r->body || !r->ca) { flux_client_free(r); return NULL; }
+    if (!r->method || !r->url || !r->headers || !r->body || !r->ca) { iris_client_free(r); return NULL; }
     return r;
 }
 static size_t receive(char *bytes, size_t size, size_t count, void *ptr) {
@@ -95,7 +95,7 @@ static int valid_url(const char *url, const char *ca) {
 done:
     curl_free(scheme); curl_free(host); curl_url_cleanup(u); return valid;
 }
-int flux_client_perform(void *ptr) {
+int iris_client_perform(void *ptr) {
     request *r=ptr;
     if (!valid_url(r->url,r->ca)) return -2;
     CURL *c=curl_easy_init();
@@ -133,5 +133,5 @@ done:
     }
     curl_slist_free_all(headers); return result;
 }
-int flux_client_status(void *ptr) { return ((request *)ptr)->status; }
-const char *flux_client_body(void *ptr) { return ((request *)ptr)->response; }
+int iris_client_status(void *ptr) { return ((request *)ptr)->status; }
+const char *iris_client_body(void *ptr) { return ((request *)ptr)->response; }

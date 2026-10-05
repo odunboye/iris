@@ -7,15 +7,15 @@ import Data.Maybe
 
 %default covering
 
-%foreign "C:flux_client_new,libflux_client_http"
+%foreign "C:iris_client_new,libiris_client_http"
 newRequest : String -> String -> String -> String -> Int -> String -> PrimIO AnyPtr
-%foreign "C__collect_safe:flux_client_perform,libflux_client_http"
+%foreign "C__collect_safe:iris_client_perform,libiris_client_http"
 perform : AnyPtr -> PrimIO Int
-%foreign "C:flux_client_status,libflux_client_http"
+%foreign "C:iris_client_status,libiris_client_http"
 status : AnyPtr -> PrimIO Int
-%foreign "C:flux_client_body,libflux_client_http"
+%foreign "C:iris_client_body,libiris_client_http"
 body : AnyPtr -> PrimIO String
-%foreign "C:flux_client_free,libflux_client_http"
+%foreign "C:iris_client_free,libiris_client_http"
 freeRequest : AnyPtr -> PrimIO ()
 
 method : Method -> String
