@@ -1,0 +1,6 @@
+package iris-capture-dom
+depends = iris >= 0.4.1
+sourcedir = "."
+modules = CaptureDOM
+main = CaptureDOM
+executable = capture-dom

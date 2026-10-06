@@ -282,7 +282,7 @@ renderHTML (WCapture s facing onCapture) st _ inputMap = do
             "padding:8px 12px;color:#c9d1d9;font-family:inherit;width:100%;" ++
             "font-size:14px;" ++ styleToCSS s
   let accessibleName = controlName s "Capture photo"
-  pure $ "<input type='file' accept='image/*'" ++ captureAttr facing ++
+  pure $ "<input type='file' accept='image/jpeg,image/png'" ++ captureAttr facing ++
          " aria-label='" ++ escapeHTML accessibleName ++ "'" ++ controlIdentity "capture" s eid ++
          controlAttributes s (controlId "capture" s eid) ++ styleAttr css ++ " " ++
          "data-iris-capture='" ++ show eid ++ "'/>" ++ controlDetails s (controlId "capture" s eid)
