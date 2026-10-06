@@ -404,6 +404,12 @@ mutual
 
  renderOnCanvas _ WSpacer _ _ = pure ()
 
+ -- Not interactive on this backend yet (see Widget.WCapture's doc
+ -- comment, and Canvas.Layout's hit-test collector, which also doesn't
+ -- register it) - renders nothing rather than a tappable-looking region
+ -- that wouldn't actually respond to a tap.
+ renderOnCanvas _ (WCapture _ _ _) _ _ = pure ()
+
  renderOnCanvas m (WDivider s) r ctx = do
   let y   = cy m r.row + m.cellH * 0.5
       col = case s.fg of Nothing => "#30363d"; Just c => irisToCSS c

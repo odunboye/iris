@@ -202,6 +202,13 @@ mutual
     MkWSize (fromMaybeN maxW s.fixedW)
             (fromMaybeN (1 + vInset s) s.fixedH)
 
+  -- Not interactive on this backend yet (see Widget.WCapture's doc
+  -- comment); still occupies one line so a layout built for it doesn't
+  -- collapse unexpectedly when run on terminal.
+  natSize (WCapture s _ _) maxW _ =
+    MkWSize (fromMaybeN maxW s.fixedW)
+            (fromMaybeN (1 + vInset s) s.fixedH)
+
   natSize (WButton s lbl _) maxW _ =
     let tw = length lbl + 2
     in MkWSize (fromMaybeN (tw + hInset s) s.fixedW)
@@ -357,6 +364,11 @@ mutual
     let ir  = innerRect s r
         brd = drawBorder s.border s.label r
     in brd ++ moveCursor ir.col ir.row ++ styleAttrs s ++ padRight ir.w (sanitizeText (inputDisplay s val)) ++ resetAttrs
+
+  renderWidget (WCapture s _ _) r =
+    let ir = innerRect s r
+    in moveCursor ir.col ir.row ++ styleAttrs s ++
+       padRight ir.w (sanitizeText "[capture: not supported in terminal]") ++ resetAttrs
 
   renderWidget (WButton s lbl _) r =
     let ir = innerRect s r

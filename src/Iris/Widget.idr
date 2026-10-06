@@ -151,6 +151,16 @@ public export
 styled : List (Style -> Style) -> Style
 styled = foldl (\s, f => f s) defaultStyle
 
+-- ─── Capture ─────────────────────────────────────────────────────────────────
+
+||| Which camera a capture control prefers. Maps to the HTML `capture`
+||| attribute on the web backend (`user` | `environment` | absent); a
+||| browser without a camera, or a desktop without one active, falls back
+||| to its normal file picker either way - this is a preference, not a
+||| guarantee.
+public export
+data CaptureFacing = FacingAny | FacingUser | FacingEnvironment
+
 -- ─── Widget ──────────────────────────────────────────────────────────────────
 
 ||| The abstract widget tree.
@@ -166,6 +176,15 @@ data Widget : (msg : Type) -> Type where
 
   ||| Editable single-line text field.  `value` is the current string.
   WInput    : Style -> (value : String) -> (onChange : String -> msg) -> Widget msg
+
+  ||| Capture a photo. `onCapture` receives the image as a base64 data URL
+  ||| (e.g. "data:image/jpeg;base64,..."), delivered once per capture - not
+  ||| a persistent value like WInput's. DOM only today: on the web backend
+  ||| this opens the device camera on supporting mobile browsers (a file
+  ||| picker with a camera option elsewhere, same control either way, see
+  ||| CaptureFacing); Terminal/Canvas accept the widget without rejecting
+  ||| it, but render it as a non-interactive placeholder for now.
+  WCapture  : Style -> CaptureFacing -> (onCapture : String -> msg) -> Widget msg
 
   ||| Clickable / keyboard-activatable button.
   WButton   : Style -> String -> msg -> Widget msg
@@ -206,6 +225,7 @@ Functor Widget where
   map f (WText   s t)           = WText   s t
   map f (WWrapText s t)         = WWrapText s t
   map f (WInput  s v h)         = WInput  s v (f . h)
+  map f (WCapture s facing h)   = WCapture s facing (f . h)
   map f (WButton s t m)         = WButton s t (f m)
   map f (WCheckbox s c m)       = WCheckbox s c (f m)
   map f (WProgress  s p)        = WProgress  s p
@@ -255,6 +275,17 @@ button = WButton defaultStyle
 public export
 input : String -> (String -> msg) -> Widget msg
 input = WInput defaultStyle
+
+||| Prefer the rear/outward camera - photographing a document, a receipt,
+||| anything not the device holder's own face.
+public export
+captureDocument : (String -> msg) -> Widget msg
+captureDocument = WCapture defaultStyle FacingEnvironment
+
+||| Prefer the front/selfie camera.
+public export
+captureSelfie : (String -> msg) -> Widget msg
+captureSelfie = WCapture defaultStyle FacingUser
 
 public export
 scrollView : Nat -> Nat -> Widget msg -> Widget msg

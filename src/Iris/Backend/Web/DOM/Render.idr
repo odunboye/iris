@@ -40,6 +40,11 @@ colorToCSS ILightYellow  = "#e3b341"
 colorToCSS IDarkBlue     = "#1f6feb"
 colorToCSS IDarkGray     = "#6e7681"
 
+captureAttr : CaptureFacing -> String
+captureAttr FacingAny         = ""
+captureAttr FacingUser        = " capture='user'"
+captureAttr FacingEnvironment = " capture='environment'"
+
 -- ─── Style declarations materialized into runtime stylesheet classes ────────
 
 styleAttr : String -> String
@@ -264,6 +269,23 @@ renderHTML (WInput s val onChange) st _ inputMap = do
          (if s.control.readOnly then " readonly" else "") ++ " autocomplete='off'" ++ styleAttr css ++ " " ++
          "value='" ++ escapeHTML val ++ "' " ++
          "data-iris-input='" ++ show eid ++ "'/>" ++ controlDetails s (controlId "input" s eid)
+
+-- `onCapture` is delivered once per capture, not a persistent value like
+-- WInput's - reuses `inputMap`'s (Nat, String -> msg) shape exactly, since
+-- the payload is the same shape (an id-keyed string callback); no new map
+-- type needed. See Iris.Backend.Web.DOM.Run's 'change' listener and its
+-- 'F' queue tag for the other half of the wiring.
+renderHTML (WCapture s facing onCapture) st _ inputMap = do
+  eid <- nextId st
+  when (not s.control.disabled) (modifyIORef inputMap ((eid, onCapture) ::))
+  let css = "background:#0d1117;border:1px solid #30363d;border-radius:4px;" ++
+            "padding:8px 12px;color:#c9d1d9;font-family:inherit;width:100%;" ++
+            "font-size:14px;" ++ styleToCSS s
+  let accessibleName = controlName s "Capture photo"
+  pure $ "<input type='file' accept='image/*'" ++ captureAttr facing ++
+         " aria-label='" ++ escapeHTML accessibleName ++ "'" ++ controlIdentity "capture" s eid ++
+         controlAttributes s (controlId "capture" s eid) ++ styleAttr css ++ " " ++
+         "data-iris-capture='" ++ show eid ++ "'/>" ++ controlDetails s (controlId "capture" s eid)
 
 renderHTML (WProgress s frac) _ _ _ =
   pure (renderProgress frac)
