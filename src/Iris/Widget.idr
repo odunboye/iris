@@ -177,7 +177,11 @@ data Widget : (msg : Type) -> Type where
   ||| Editable single-line text field.  `value` is the current string.
   WInput    : Style -> (value : String) -> (onChange : String -> msg) -> Widget msg
 
-  ||| Capture a photo. `onCapture` receives the image as a base64 data URL
+  ||| Capture a JPEG/PNG photo. The DOM backend prepares a JPEG data URL
+  ||| with maximum edge 1600 pixels and strips original metadata. Inputs
+  ||| are limited to 8 MB / 24 megapixels; output to 2 MB. Invalid photos
+  ||| show native validation feedback without invoking the callback.
+  ||| `onCapture` receives the image as a base64 data URL
   ||| (e.g. "data:image/jpeg;base64,..."), delivered once per capture - not
   ||| a persistent value like WInput's. DOM only today: on the web backend
   ||| this opens the device camera on supporting mobile browsers (a file

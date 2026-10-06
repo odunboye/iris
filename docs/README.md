@@ -14,6 +14,7 @@ compiling an app from packaging and running it.
 
 - [Organize a project and add targets](guides/project-structure.md)
 - [Build forms with identity, validation and focus](guides/forms.md)
+- [Capture document photos and selfies](guides/camera.md)
 - [Run effects and make a browser request](guides/effects.md)
 - [Test an application and prepare a release](guides/testing-and-release.md)
 - [Resolve browser and Android startup problems](troubleshooting/startup.md)

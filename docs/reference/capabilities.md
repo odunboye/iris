@@ -6,6 +6,7 @@ platform. Share `UIApp` and `Widget`; select behavior using this matrix.
 | Capability | DOM (`runWeb`) | Terminal (`runTUI`) | Canvas / WebView (`runCanvas`, `runMobile`) |
 |---|---|---|---|
 | Controls | Semantic controls with disabled/read-only state, descriptions and validation | ANSI-rendered widgets; keyboard application input | Painted widgets with disabled/read-only native-control overlay |
+| [Photo capture](../guides/camera.md) | Camera/file picker with bounded JPEG preparation | Non-interactive placeholder | No interactive capture; use DOM inside WebView |
 | Layout | Browser CSS, stacks, wrapped text and scroll widgets | Character-cell layout, wrapping and clipped scroll offsets | Cell-metric layout, wrapping and clipped scroll offsets |
 | Scrolling | Browser scroll container | Application controls offsets | Application controls offsets; not a general native scroll system |
 | Keyboard/text | Native browser input, composition and typed key events | Terminal key events; application handles editing/activation | Native overlay input, composition and typed key events |
